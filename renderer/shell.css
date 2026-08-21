@@ -53,6 +53,10 @@ body {
   padding: 0 8px;
   background: #2b2d31;
   color: #eee;
+  /* 规格 §5.3：标签过多时横向滚动（配合 .tab 不收缩） */
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
 }
 
 /* 可交互元素脱离拖拽区（Ruling O）：标签、关闭 ×、+ 按钮均可点击 */
@@ -62,8 +66,9 @@ body {
   -webkit-app-region: no-drag;
 }
 
-/* 标签页（Task 10）：标题省略 + 激活高亮 + × 关闭 */
+/* 标签页（Task 10）：标题省略 + 激活高亮 + × 关闭；flex: 0 0 auto 保证不收缩、溢出走 tabbar 滚动 */
 #tabbar .tab {
+  flex: 0 0 auto;
   max-width: 160px;
   min-width: 56px;
   display: flex;

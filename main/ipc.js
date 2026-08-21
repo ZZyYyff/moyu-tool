@@ -60,6 +60,8 @@ function register({ userDataDir, shellWin, getMode, setMode, getTabsSnapshot, ta
 
   // —— 小说（Task 9）——
   ipcMain.handle('novels:import', async (_e, filePath) => {
+    // 规格 §8：仅接受绝对路径（拖放经 webUtils.getPathForFile 一定为绝对路径）
+    if (typeof filePath !== 'string' || !path.isAbsolute(filePath)) throw new Error('非法文件路径');
     const novel = await novels.importNovel(filePath, path.join(userDataDir, 'novels'));
     // Ruling C：import 成功后登记到内存缓存（T11 拖放 / T12 会话恢复依赖）
     novelsMeta.set(novel.novelId, { novel, storedPath: novelStoredPath(novel.novelId, userDataDir) });

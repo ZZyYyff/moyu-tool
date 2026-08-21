@@ -153,7 +153,9 @@ window.addEventListener('drop', async (e) => {
   const files = [...e.dataTransfer.files];
   if (files.length === 1 && (files[0].name.endsWith('.txt') || files[0].name.endsWith('.epub'))) {
     const filePath = window.api.getPathForFile(files[0]);
-    showConfirm(`打开小说《${files[0].name}》？`, async () => {
+    // 规格 §5.2/§9：超大文件（>50MB）提示，仍可读（解析按章懒读取，渲染不进整文件）
+    const big = files[0].size > 50 * 1024 * 1024;
+    showConfirm(`打开小说《${files[0].name}》${big ? '（大文件，解析稍慢，仍可读）' : ''}？`, async () => {
       try {
         const novel = await window.api.invoke('novels:import', filePath);
         await window.api.invoke('tabs:create-novel', novel);
@@ -171,7 +173,11 @@ window.addEventListener('drop', async (e) => {
   const url = text ? text.split('\n').map((l) => l.trim()).find((l) => l && !l.startsWith('#') && /^https?:\/\//i.test(l)) : null;
   if (url) {
     showConfirm(`打开 ${url.slice(0, 50)}？`, () => window.api.invoke('tabs:create', url));
+    return;
   }
+  // 规格 §9：拖入不支持的类型 → 忽略并轻提示
+  showConfirm('不支持的拖入内容：仅支持 txt/epub 文件或 http(s) 链接', () => hideConfirm());
+  $('#confirm-bar').classList.add('error');
 });
 
 function showConfirm(text, onOk) {
@@ -187,3 +193,11 @@ function hideConfirm() {
   $('#confirm-ok').onclick = null;
   $('#confirm-cancel').onclick = null;
 }
+
+// 规格 §7：关闭/隐藏时强制写盘 —— 主进程在 win 'hide'/'close' 时推送 flush（主进程驱动，
+// 因 Electron+Windows 上 hide() 不触发渲染进程 visibilitychange）；另保留 visibilitychange
+// 兜底（其他平台/最小化场景可能触发）。saveNow 为 reader.js 的全局函数，事件触发时已就绪。
+window.api.on('app:flush-progress', () => saveNow());
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') saveNow();
+});

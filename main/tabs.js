@@ -39,6 +39,9 @@ module.exports = function initTabManager({ win, userDataDir, notify }) {
   function setMode(m) { mode = m; if (m === 'ad') detachAll(); else attach(); }
 
   function createWebTab(url) {
+    // 规格 §8：仅放行 http/https（与 will-navigate / window.open 拦截一致；
+    // renderer 拖放/地址栏已预校验，此处是主进程入口兜底）
+    if (typeof url !== 'string' || !/^https?:/i.test(url)) return null;
     const id = nextId++;
     const view = new WebContentsView({
       webPreferences: {

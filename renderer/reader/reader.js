@@ -33,8 +33,14 @@ async function openNovel(novel) {
     state.chapterIndex = saved.chapterIndex;
     await loadChapter(saved.chapterIndex);
     // 滚动定位到章内 35% 处（restoreScroll 语义：偏上定位，防止跳到屏底）
+    // 伪装模式下 content-view 隐藏 → 阅读器无布局（scrollHeight=0）→ 直接定位无效；
+    // 临时显形取得真实滚动范围（同一同步任务内执行，无重绘）后还原，保证 §10.8 位置恢复任意模式成立
     const el = $('#reader-content');
+    const cv = $('#content-view');
+    const wasHidden = cv.hidden;
+    if (wasHidden) cv.hidden = false;
     el.scrollTop = Math.max(0, (el.scrollHeight - el.clientHeight) * restoreScroll(saved).ratio);
+    if (wasHidden) cv.hidden = true;
   }
 }
 

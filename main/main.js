@@ -68,6 +68,15 @@ app.whenReady().then(() => {
   // 假关闭按钮 → 真正收进托盘（Task 5 遗留的 handler）
   ipcMain.on('window:hide', () => win.hide());
 
+  // 规格 §7：隐藏/关闭时强制写盘 —— 主进程驱动（实测 Electron 43 + Windows 上 hide()
+  // 不触发渲染进程 visibilitychange，故由主进程监听 hide/close 推送 flush，渲染器收到后 saveNow）
+  const flushProgress = () => {
+    if (win.isDestroyed() || win.webContents.isDestroyed()) return;
+    win.webContents.send('app:flush-progress');
+  };
+  win.on('hide', flushProgress);
+  win.on('close', flushProgress);
+
   // 系统托盘：左键隐藏/恢复；右键菜单 显示窗口/切回内容/伪装样式/设置/退出
   tray = createTray({
     getWindow: () => win,
