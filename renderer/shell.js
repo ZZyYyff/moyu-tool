@@ -27,6 +27,12 @@ function setMode(mode) {
   window.api.send('mode:set', mode);
 }
 
+// 终审修复：拖放确认后的操作一律先切回内容模式 —— ad（伪装）模式下 content-view 隐藏，
+// 直接建标签/渲染阅读器无任何可见结果（与 showAddressBar 的 Ruling T 先例一致；错误提示无需切）。
+function ensureContentMode() {
+  if (document.body.dataset.mode === 'ad') setMode('content');
+}
+
 // 初始状态：主进程回传 settings + 当前模式
 window.api.on('mode:set', (mode) => {
   document.body.dataset.mode = mode;
@@ -169,6 +175,7 @@ window.addEventListener('drop', async (e) => {
     // 规格 §5.2/§9：超大文件（>50MB）提示，仍可读（解析按章懒读取，渲染不进整文件）
     const big = files[0].size > 50 * 1024 * 1024;
     showConfirm(`打开小说《${files[0].name}》${big ? '（大文件，解析稍慢，仍可读）' : ''}？`, async () => {
+      ensureContentMode();
       try {
         const novel = await window.api.invoke('novels:import', filePath);
         await window.api.invoke('tabs:create-novel', novel);
@@ -185,7 +192,7 @@ window.addEventListener('drop', async (e) => {
   // 逐行解析：跳过空行与 '#' 注释行（text/uri-list 规范），取第一个 http(s) 行
   const url = text ? text.split('\n').map((l) => l.trim()).find((l) => l && !l.startsWith('#') && /^https?:\/\//i.test(l)) : null;
   if (url) {
-    showConfirm(`打开 ${url.slice(0, 50)}？`, () => window.api.invoke('tabs:create', url));
+    showConfirm(`打开 ${url.slice(0, 50)}？`, () => { ensureContentMode(); window.api.invoke('tabs:create', url); });
     return;
   }
   // 规格 §9：拖入不支持的类型 → 忽略并轻提示
