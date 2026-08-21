@@ -1,6 +1,6 @@
 // main/main.js
 const path = require('path');
-const { app, ipcMain } = require('electron');
+const { app, ipcMain, screen } = require('electron');
 const windowApi = require('./window');
 const ipc = require('./ipc');
 const store = require('./store');
@@ -45,15 +45,26 @@ app.whenReady().then(() => {
   // 悬停揭示（brainstorming 2026-08-21）：鼠标悬停窗口显示内容、移开立即切回伪装。
   // 立即切换（用户裁定）；设置开关 hoverReveal 可关（默认开）。主进程驱动 →
   // 需显式推送 mode:set 让壳层同步 DOM（与托盘/热键路径一致）。
+  // 实现用轮询而非 mouse-enter/mouse-leave：实测 Electron 43 + Windows 无边框窗口
+  // 上这两个事件不触发（终端零输出，用户实测确认），轮询 getCursorScreenPoint 可靠。
   const hoverEnabled = () => store.loadSettings(userDataDir).hoverReveal !== false;
-  win.on('mouse-enter', () => {
+  const launchedAt = Date.now(); // 启动 2s 宽限：光标恰好停在弹窗位置时不立刻揭开伪装
+  let hoverInside = null; // 上次判定结果，状态未变不重复切换
+  const hoverTimer = setInterval(() => {
     if (win.isDestroyed()) return;
-    if (hoverEnabled() && mode === 'ad') { applyMode('content'); win.webContents.send('mode:set', 'content'); }
-  });
-  win.on('mouse-leave', () => {
-    if (win.isDestroyed()) return;
-    if (hoverEnabled() && mode === 'content') { applyMode('ad'); win.webContents.send('mode:set', 'ad'); }
-  });
+    if (!win.isVisible()) return; // 托盘隐藏期间不判定
+    if (Date.now() - launchedAt < 2000) return;
+    const cursor = screen.getCursorScreenPoint();
+    const b = win.getBounds();
+    const inside = cursor.x >= b.x && cursor.x < b.x + b.width && cursor.y >= b.y && cursor.y < b.y + b.height;
+    if (inside === hoverInside) return;
+    hoverInside = inside;
+    if (inside) {
+      if (hoverEnabled() && mode === 'ad') { applyMode('content'); win.webContents.send('mode:set', 'content'); }
+    } else {
+      if (hoverEnabled() && mode === 'content') { applyMode('ad'); win.webContents.send('mode:set', 'ad'); }
+    }
+  }, 200);
   ipc.register({
     userDataDir,
     shellWin,
@@ -107,7 +118,7 @@ app.whenReady().then(() => {
     getStyle: () => store.loadSettings(userDataDir).adStyle,
   });
 
-  win.on('closed', () => app.quit());
+  win.on('closed', () => { clearInterval(hoverTimer); app.quit(); });
 
   // 全局热键：回调表注入一次，注册/改键共用（Ruling B）
   hotkeys.setCallbacks({
