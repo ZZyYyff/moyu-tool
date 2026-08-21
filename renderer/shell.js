@@ -64,7 +64,7 @@ function renderTabbar(snapshot) {
     const title = document.createElement('span');
     title.textContent = t.title;
     el.appendChild(title);
-    el.onclick = () => window.api.invoke('tabs:activate', t.id);
+    el.onclick = () => window.api.send('tabs:activate', t.id); // 评审修正：invoke 只配 ipcMain.handle，此处通道为 on → send
     const close = document.createElement('button');
     close.textContent = '×';
     close.onclick = (e) => { e.stopPropagation(); window.api.send('tabs:close', t.id); };
@@ -106,7 +106,7 @@ window.api.on('tabs:changed', (msg) => {
 
 // 网页加载失败 → 错误页 + 重试按钮（主进程已把失败标签的视图摘除，DOM 错误页可点）
 window.api.on('tab:error', (msg) => {
-  $('#view-slot').innerHTML = `<div class="errpage">加载失败 (${msg.code})：<br>${msg.description}<br><button onclick="window.api.invoke('tabs:reload-active')">重试</button></div>`;
+  $('#view-slot').innerHTML = `<div class="errpage">加载失败 (${msg.code})：<br>${msg.description}<br><button onclick="window.api.send('tabs:reload-active')">重试</button></div>`;
 });
 
 // 地址栏：回车开标签（无协议自动补 https://）；后退/前进/刷新

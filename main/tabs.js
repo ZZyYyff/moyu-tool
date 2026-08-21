@@ -69,7 +69,13 @@ module.exports = function initTabManager({ win, userDataDir, notify }) {
     // 注意：错误页（chrome-error 提交）也会触发 did-finish-load，此时 tab.failed 仍为 true，
     // 不能在这里清 failed —— 只有 tabs:reload-active（重试）会清除 failed 并重新挂载。
     view.webContents.on('did-finish-load', () => { if (!tab.failed && activeId === id) attach(); });
-    view.webContents.on('did-navigate', (_e, u) => { tab.url = u; });
+    // 评审修正：失败标签的唯一恢复时机是"真实成功导航提交"。实测 chrome-error 提交不触发
+    // did-navigate（仅 did-start-navigation/did-finish-load），故这里清 failed 安全：
+    // 后退到历史页 / 重试成功 / 页内新导航成功 → 重新挂载；错误页提交 → 不会走到这里。
+    view.webContents.on('did-navigate', (_e, u) => {
+      tab.url = u;
+      if (tab.failed) { tab.failed = false; if (activeId === id) attach(); }
+    });
     view.webContents.on('page-title-updated', (_e, t) => { tab.title = t; push(); });
     activateTab(id);
     view.webContents.loadURL(url).catch(() => {});
@@ -125,7 +131,8 @@ module.exports = function initTabManager({ win, userDataDir, notify }) {
   function setAddressBarVisible(v) { addressBarVisible = v; layout(); }
 
   function getSnapshot() {
-    return [...tabs.values()].map(t => ({ id: t.id, type: t.type, title: t.title, active: t.id === activeId, muted: t.muted }));
+    // 含 novelId（brief 代码遗漏，Ruling A 需要）：novel 标签切到阅读器时 switchActiveTab 凭 novelId 查 window.__novels
+    return [...tabs.values()].map(t => ({ id: t.id, type: t.type, title: t.title, active: t.id === activeId, muted: t.muted, novelId: t.novelId }));
   }
 
   function push() { notify({ type: 'tabs:changed', tabs: getSnapshot(), activeId }); }

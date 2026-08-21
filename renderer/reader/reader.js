@@ -12,7 +12,8 @@ function restoreScroll(progress) {
 
 // —— 阅读器状态 ——
 let state = null; // { novel, chapterIndex, currentChapter, nextStart }
-const $ = (sel) => document.querySelector(sel);
+// 不重复声明 $：shell.js 已声明顶层 const $，重复声明会抛 SyntaxError 导致本脚本整体不执行
+// （T10 评审验证发现，Task 9 遗留缺陷）；浏览器下复用 shell.js 的 $，Node 测试不依赖 $。
 const readerView = () => $('#reader-view');
 
 async function openNovel(novel) {
