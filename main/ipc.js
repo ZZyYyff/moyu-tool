@@ -3,6 +3,7 @@ const path = require('path');
 const { ipcMain } = require('electron');
 const store = require('./store');
 const novels = require('./novels');
+const hotkeys = require('./hotkeys');
 
 // Ruling C：novels:import 成功后登记的内存缓存（模块级 Map）
 // { novelId: { novel, storedPath } }，novels:chapter 从这里取 storedPath
@@ -44,6 +45,17 @@ function register({ userDataDir, shellWin, getMode, setMode, getTabsSnapshot, ta
     store.saveSettings(s, userDataDir);
     shellWin.webContents.send('settings:changed', s);
     return s;
+  });
+
+  // —— 设置面板（Task 13）——
+  // 改键：applyHotkeyChange 内部 —— 冲突/非法 → 不写盘返回 {ok:false, reason}；
+  // 成功 → 全局注册新组合、注销旧组合并持久化。渲染器失败时用 oldValue 回显输入框。
+  ipcMain.handle('settings:apply-hotkey', (_e, kind, acc) => {
+    const s = store.loadSettings(userDataDir);
+    const old = s.hotkeys[kind];
+    const r = hotkeys.applyHotkeyChange(kind, acc, userDataDir);
+    if (!r.ok) return { ok: false, reason: r.reason, oldValue: old };
+    return { ok: true, oldValue: old };
   });
 
   // —— 小说（Task 9）——

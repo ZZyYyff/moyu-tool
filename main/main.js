@@ -80,6 +80,8 @@ app.whenReady().then(() => {
       win.webContents.send('settings:changed', s);
     },
     openSettings: () => win.webContents.send('open-settings'),
+    // Task 13：托盘"伪装样式"radio 按当前设置勾选（每次右键重建菜单时取最新值）
+    getStyle: () => store.loadSettings(userDataDir).adStyle,
   });
 
   win.on('closed', () => app.quit());

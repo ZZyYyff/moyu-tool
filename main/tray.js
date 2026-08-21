@@ -9,7 +9,7 @@ const STYLES = [
   ['sys', '系统通知'],
 ];
 
-module.exports = function createTray({ getWindow, getMode, setMode, switchStyle, openSettings }) {
+module.exports = function createTray({ getWindow, getMode, setMode, switchStyle, openSettings, getStyle }) {
   const icon = nativeImage.createFromPath(path.join(__dirname, '..', 'assets', 'tray.png'));
   const tray = new Tray(icon);
   tray.setToolTip('摸鱼工具');
@@ -20,7 +20,9 @@ module.exports = function createTray({ getWindow, getMode, setMode, switchStyle,
     { label: '切回内容模式', click: () => setMode('content') },
     {
       label: '伪装样式',
-      submenu: STYLES.map(([key, name]) => ({ label: name, type: 'radio', checked: false, click: () => switchStyle(key) })),
+      // Task 13（Task 6 deferred minor）：radio 按当前 settings.adStyle 勾选；
+      // 菜单每次右键重建，checked 取注入的 getStyle() 最新值（点击切换后重开菜单即刷新）
+      submenu: STYLES.map(([key, name]) => ({ label: name, type: 'radio', checked: getStyle ? getStyle() === key : false, click: () => switchStyle(key) })),
     },
     { type: 'separator' },
     { label: '设置', click: () => openSettings() },

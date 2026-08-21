@@ -67,9 +67,10 @@ window.api.on('settings:changed', (settings) => {
   renderAd(settings.adStyle);
 });
 
-// 托盘/广告菜单"设置"入口占位（Task 13 实现真正的设置面板）
+// 托盘"设置"入口 → 设置面板（Task 13：settings.js 实现；广告菜单同调 openSettings，
+// 该函数为 settings.js 顶层全局声明，脚本加载完成后任意入口可用）
 window.api.on('open-settings', () => {
-  console.log('open-settings: 设置面板待 Task 13 实现');
+  openSettings();
 });
 
 // —— 多标签（Task 10）——

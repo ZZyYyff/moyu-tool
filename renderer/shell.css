@@ -241,3 +241,117 @@ body {
 #confirm-bar.error {
   background: rgba(160, 40, 30, 0.95);
 }
+
+/* 设置面板（Task 13）：居中模态卡片 + 全屏遮罩。
+   inset:0 + margin:auto + fit-content 实现视口居中 —— 刻意不用 transform 居中
+   （transform 会劫持 ::before 的 fixed 包含块，遮罩将只覆盖卡片大小）；
+   ::before 固定铺满视口做遮罩，z-index:-1 使其落在卡片层叠上下文内、页面其余内容之上 */
+#settings-modal {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: fit-content;
+  height: fit-content;
+  z-index: 20;
+  background: #fff;
+  border-radius: 10px;
+  padding: 18px 24px;
+  box-shadow: 0 10px 36px rgba(0, 0, 0, 0.35);
+}
+
+#settings-modal::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+#settings-modal h3 {
+  margin: 0 0 12px;
+  font-size: 16px;
+}
+
+#settings-modal .row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 9px 0;
+  white-space: nowrap;
+}
+
+#settings-modal .row label {
+  flex: 0 0 auto;
+  width: 110px;
+  text-align: right;
+  color: #555;
+  font-size: 13px;
+}
+
+/* 文本类输入与下拉（排除滑杆/复选框，保持原生观感） */
+#settings-modal .row input:not([type="range"]):not([type="checkbox"]),
+#settings-modal .row select {
+  flex: 1 1 auto;
+  min-width: 170px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 13px;
+  outline: none;
+  background: #fff;
+}
+
+#settings-modal .row input:focus,
+#settings-modal .row select:focus {
+  border-color: #4a90d9;
+}
+
+#settings-modal #rd-size {
+  flex: 1 1 auto;
+}
+
+#settings-modal #rd-size-v {
+  flex: 0 0 auto;
+  min-width: 18px;
+  font-size: 12px;
+  color: #777;
+}
+
+#settings-modal #hk-msg {
+  margin: 4px 0 0 120px;
+  min-height: 15px;
+  font-size: 12px;
+  word-break: break-all;
+}
+
+#settings-modal .row:last-child {
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+#settings-modal button {
+  border: none;
+  border-radius: 4px;
+  padding: 6px 20px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+#settings-modal #set-save {
+  background: #4a90d9;
+  color: #fff;
+}
+
+#settings-modal #set-save:hover {
+  background: #3f7fc4;
+}
+
+#settings-modal #set-close {
+  background: #eee;
+  color: #333;
+}
+
+#settings-modal #set-close:hover {
+  background: #ddd;
+}

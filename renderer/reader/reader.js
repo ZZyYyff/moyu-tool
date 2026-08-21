@@ -100,9 +100,12 @@ function persistReaderPrefs() {
 }
 
 // 应用阅读偏好到 DOM（T13 设置面板复用，务必保持导出）：
-// fontSize → CSS 变量 --fs；fontFamily/dark → reader-view 的 data 属性
-function applyReaderPrefs() {
-  const prefs = window.__settings && window.__settings.reader;
+// fontSize → CSS 变量 --fs；fontFamily/dark → reader-view 的 data 属性。
+// prefs 可显式传入（T13 设置面板保存时传入本地值立即生效）；缺省读 window.__settings.reader
+// （openNovel / 工具栏改动路径；偏好经 settings:changed 广播同步到 __settings，
+//   故设置面板保存后下次 openNovel 也会读到新偏好）
+function applyReaderPrefs(prefs) {
+  prefs = prefs || (window.__settings && window.__settings.reader);
   if (!prefs) return;
   readerView().dataset.font = prefs.fontFamily;
   readerView().dataset.dark = String(prefs.dark);
