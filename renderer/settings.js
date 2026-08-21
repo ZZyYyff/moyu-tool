@@ -1,7 +1,8 @@
-// renderer/settings.js — 设置面板（Task 13）：热键改键 / 伪装默认样式 / 阅读偏好
+// renderer/settings.js — 设置面板（Task 13）：热键改键 / 伪装默认样式
 // 复用 shell.js 顶层的 $（本文件不重复声明 const $，避免 SyntaxError）；
-// 依赖 reader.js 的 applyReaderPrefs（已支持显式传 prefs）与 ad.js 的 renderAd，
-// 均为运行时调用（脚本已全部加载），index.html 中本文件加载顺序位于二者之后。
+// 依赖 ad.js 的 renderAd（运行时调用，脚本已全部加载）。
+// brainstroming 改版（2026-08-21）：阅读偏好（字号/字体/暗色）移出主面板，
+// 唯一入口为阅读器工具栏"设置"小面板（reader.js 的 #reader-settings）。
 function openSettings() {
   const modal = $('#settings-modal');
   modal.hidden = false;
@@ -18,13 +19,6 @@ async function buildSettingsForm() {
     <div class="row"><label>默认伪装样式</label><select id="ad-style">
       ${['news','game','prize','sys'].map(k => `<option value="${k}" ${s.adStyle === k ? 'selected' : ''}>${k}</option>`).join('')}
     </select></div>
-    <div class="row"><label>字号</label><input id="rd-size" type="range" min="12" max="28" value="${s.reader.fontSize}"> <span id="rd-size-v">${s.reader.fontSize}</span></div>
-    <div class="row"><label>字体</label><select id="rd-font">
-      <option value="yahei" ${s.reader.fontFamily === 'yahei' ? 'selected' : ''}>微软雅黑</option>
-      <option value="song" ${s.reader.fontFamily === 'song' ? 'selected' : ''}>宋体</option>
-      <option value="kai" ${s.reader.fontFamily === 'kai' ? 'selected' : ''}>楷体</option>
-    </select></div>
-    <div class="row"><label>默认深色阅读</label><input id="rd-dark" type="checkbox" ${s.reader.dark ? 'checked' : ''}></div>
     <p id="hk-msg" style="color:#c00"></p>
     <div class="row"><button id="set-save">保存</button><button id="set-close">关闭</button></div>`;
   // 热键捕获：点击输入框后按键组合写入
@@ -49,14 +43,8 @@ async function buildSettingsForm() {
   document.getElementById('set-save').onclick = async () => {
     const s2 = await window.api.invoke('settings:get');
     s2.adStyle = document.getElementById('ad-style').value;
-    s2.reader = {
-      fontSize: +document.getElementById('rd-size').value,
-      fontFamily: document.getElementById('rd-font').value,
-      dark: document.getElementById('rd-dark').checked,
-    };
     await window.api.invoke('settings:save', s2);
     renderAd(s2.adStyle);
-    applyReaderPrefs(s2.reader);
     modal.hidden = true;
   };
   document.getElementById('set-close').onclick = () => { modal.hidden = true; };

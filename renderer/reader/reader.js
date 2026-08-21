@@ -86,39 +86,30 @@ function saveNow() {
   window.api.invoke('novels:progress', state.novel.novelId, p);
 }
 
-// —— 工具栏：目录 / 字号 A- A+ / 暗色 / 字体 / 返回伪装 ——
-const FONT_CYCLE = ['yahei', 'song', 'kai'];
+// —— 阅读设置小面板（brainstorming 2026-08-21：工具栏只留 目录/设置/返回伪装，
+// 字号/暗色/字体并入此面板，即点即改、独立于主设置面板）——
 
-function changeFontSize(delta) {
-  const prefs = window.__settings && window.__settings.reader;
-  if (!prefs) return;
-  prefs.fontSize = Math.max(12, Math.min(28, (prefs.fontSize || 16) + delta));
-  applyReaderPrefs();
-  persistReaderPrefs();
+// 面板控件 → 合并进 settings.reader 并立即应用 + 持久化（settings:changed 广播回推 __settings）
+function setReaderPrefs(partial) {
+  const prefs = (window.__settings && window.__settings.reader) || {};
+  Object.assign(prefs, partial);
+  applyReaderPrefs(prefs);
+  window.api.invoke('settings:save', { reader: prefs });
 }
 
-function toggleDark() {
-  const prefs = window.__settings && window.__settings.reader;
-  if (!prefs) return;
-  prefs.dark = !prefs.dark;
-  applyReaderPrefs();
-  persistReaderPrefs();
+function openReaderSettings() {
+  const prefs = (window.__settings && window.__settings.reader) || {};
+  $('#rs-size').value = prefs.fontSize || 16;
+  $('#rs-size-v').textContent = prefs.fontSize || 16;
+  $('#rs-dark').checked = !!prefs.dark;
+  const font = prefs.fontFamily || 'yahei';
+  const radio = document.querySelector(`#reader-settings input[name="rs-font"][value="${font}"]`);
+  if (radio) radio.checked = true;
+  $('#reader-settings').hidden = false;
 }
 
-function cycleFont() {
-  const prefs = window.__settings && window.__settings.reader;
-  if (!prefs) return;
-  const cur = prefs.fontFamily || 'yahei';
-  const idx = FONT_CYCLE.indexOf(cur);
-  prefs.fontFamily = FONT_CYCLE[(idx + 1) % FONT_CYCLE.length];
-  applyReaderPrefs();
-  persistReaderPrefs();
-}
-
-// 工具栏改动持久化到 settings.json（settings:changed 回推后 window.__settings 同步更新）
-function persistReaderPrefs() {
-  if (!window.__settings) return;
-  window.api.invoke('settings:save', { reader: { ...window.__settings.reader } });
+function closeReaderSettings() {
+  $('#reader-settings').hidden = true;
 }
 
 // 应用阅读偏好到 DOM（T13 设置面板复用，务必保持导出）：
@@ -162,16 +153,13 @@ function gotoChapter(i) {
   closeToc();
 }
 
-// —— 构建阅读器 DOM（toolbar + 内容区 + 目录浮层）——
+// —— 构建阅读器 DOM（toolbar + 内容区 + 目录浮层 + 阅读设置面板）——
 function buildReaderDom() {
   const view = readerView();
   view.innerHTML = `
     <div id="reader-toolbar">
       <button data-action="toc" title="章节目录">目录</button>
-      <button data-action="font-minus" title="缩小字号">A-</button>
-      <button data-action="font-plus" title="放大字号">A+</button>
-      <button data-action="dark" title="切换暗色">暗色</button>
-      <button data-action="font" title="切换字体">字体</button>
+      <button data-action="settings" title="阅读设置">设置</button>
       <span class="reader-spacer"></span>
       <button data-action="back" title="切回伪装界面">返回伪装</button>
     </div>
@@ -179,22 +167,49 @@ function buildReaderDom() {
     <div id="reader-toc" hidden>
       <div id="reader-toc-head"><button data-action="toc-close">← 返回</button><span id="reader-toc-title"></span></div>
       <div id="reader-toc-list"></div>
+    </div>
+    <div id="reader-settings" hidden>
+      <div class="rs-row"><label>字号</label><input id="rs-size" type="range" min="12" max="28" step="1"><span id="rs-size-v"></span></div>
+      <div class="rs-row"><label>暗色</label><input id="rs-dark" type="checkbox"></div>
+      <div class="rs-row"><label>字体</label>
+        <span class="rs-fonts">
+          <label><input type="radio" name="rs-font" value="yahei">雅黑</label>
+          <label><input type="radio" name="rs-font" value="song">宋体</label>
+          <label><input type="radio" name="rs-font" value="kai">楷体</label>
+        </span>
+      </div>
+      <button data-action="rs-close">关闭</button>
     </div>`;
   // 进度保存：scroll 不冒泡，直接监听内容区（brief 的 readerView 委托写法在无 capture 时收不到事件）
   $('#reader-content').addEventListener('scroll', scheduleSave);
-  // 工具栏/目录浮层统一事件委托
+  // 工具栏/目录浮层/设置面板统一事件委托（brainstorming 改版：toc 与设置互斥打开）
   view.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-action]');
     if (!btn) return;
     const action = btn.dataset.action;
-    if (action === 'toc') openToc();
+    if (action === 'toc') { closeReaderSettings(); openToc(); }
     else if (action === 'toc-close') closeToc();
     else if (action === 'toc-goto') gotoChapter(Number(btn.dataset.i));
-    else if (action === 'font-plus') changeFontSize(1);
-    else if (action === 'font-minus') changeFontSize(-1);
-    else if (action === 'dark') toggleDark();
-    else if (action === 'font') cycleFont();
+    else if (action === 'settings') { closeToc(); openReaderSettings(); }
+    else if (action === 'rs-close') closeReaderSettings();
     else if (action === 'back') setMode('ad');
+  });
+  // 设置面板控件：即点即改（滑杆 input 实时、暗色/字体 change 时写盘）
+  $('#rs-size').addEventListener('input', (e) => {
+    const v = +e.target.value;
+    $('#rs-size-v').textContent = v;
+    setReaderPrefs({ fontSize: v });
+  });
+  $('#rs-dark').addEventListener('change', (e) => setReaderPrefs({ dark: e.target.checked }));
+  document.querySelectorAll('#reader-settings input[name="rs-font"]').forEach((r) => {
+    r.addEventListener('change', () => setReaderPrefs({ fontFamily: r.value }));
+  });
+  // 点面板外（非面板、非"设置"按钮）关闭
+  document.addEventListener('click', (e) => {
+    const panel = $('#reader-settings');
+    if (panel.hidden) return;
+    if (e.target.closest('#reader-settings') || e.target.closest('[data-action="settings"]')) return;
+    closeReaderSettings();
   });
 }
 

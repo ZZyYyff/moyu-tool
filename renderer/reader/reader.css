@@ -152,6 +152,74 @@
   font-weight: bold;
 }
 
+/* 阅读设置小面板（brainstorming 改版）：工具栏下方浮层，字号/暗色/字体即点即改 */
+#reader-settings {
+  position: absolute;
+  top: 36px;
+  right: 8px;
+  z-index: 6;
+  width: 230px;
+  padding: 10px 12px;
+  background: #fff;
+  border: 1px solid #d8d4c8;
+  border-radius: 6px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .18);
+  font-size: 12px;
+  color: #333;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  -webkit-app-region: no-drag;
+}
+
+.rs-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rs-row > label:first-child {
+  width: 32px;
+  flex-shrink: 0;
+}
+
+#rs-size {
+  flex: 1;
+}
+
+#rs-size-v {
+  width: 24px;
+  text-align: right;
+}
+
+.rs-fonts {
+  display: flex;
+  gap: 8px;
+}
+
+#reader-settings > button {
+  align-self: flex-end;
+  border: 1px solid #cfc9bb;
+  background: #f7f5ef;
+  border-radius: 4px;
+  padding: 2px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  color: #444;
+}
+
+#reader-view[data-dark="true"] #reader-settings {
+  background: #2a2a2a;
+  border-color: #3a3a3a;
+  color: #b8b8b8;
+}
+
+#reader-view[data-dark="true"] #reader-settings > button {
+  background: #333;
+  border-color: #444;
+  color: #b8b8b8;
+}
+
 #reader-view[data-dark="true"] #reader-toc {
   background: #1e1e1e;
 }
