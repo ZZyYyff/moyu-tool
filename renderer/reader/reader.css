@@ -58,6 +58,12 @@
   margin: 14px 0;
 }
 
+/* 段落（用户反馈修复）：每段一个 <p>，首行缩进两字符（中文排版惯例） */
+#reader-content p {
+  margin: 0 0 0.6em 0;
+  text-indent: 2em;
+}
+
 /* 暗色：reader-view data-dark 属性驱动 */
 #reader-view[data-dark="true"] {
   background: #1e1e1e;

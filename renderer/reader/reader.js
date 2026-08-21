@@ -57,7 +57,15 @@ async function loadChapter(i) {
   el.scrollTop = 0;
   el.innerHTML = '';
   const h = document.createElement('h2'); h.textContent = title; el.appendChild(h);
-  const p = document.createElement('div'); p.textContent = text; el.appendChild(p);
+  // 用户反馈修复：整章曾以单个 div.textContent 渲染 —— HTML 默认折叠换行符，
+  // 中文网文"一行一段"全部挤成一段文字墙。改为按换行拆段落、每段一个 <p>
+  // （text-indent: 2em 首行缩进见 reader.css）；textContent 渲染保持无 XSS 面。
+  const paras = text.split(/\n+/).filter((s) => s.trim().length > 0);
+  for (const para of paras) {
+    const p = document.createElement('p');
+    p.textContent = para;
+    el.appendChild(p);
+  }
 }
 
 // 进度：滚动停止防抖 2s 写盘；隐藏/切走时立即写（saveNow 导出，T10 切换标签时调用）
