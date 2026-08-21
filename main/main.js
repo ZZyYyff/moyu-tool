@@ -7,6 +7,7 @@ const createTray = require('./tray');
 
 const userDataDir = app.getPath('userData');
 let win, mode = 'ad';
+let tray = null; // 模块级引用，防止托盘对象被 GC 后图标消失
 
 app.whenReady().then(() => {
   win = createMainWindow(userDataDir);
@@ -23,7 +24,7 @@ app.whenReady().then(() => {
   ipcMain.on('window:hide', () => win.hide());
 
   // 系统托盘：左键隐藏/恢复；右键菜单 显示窗口/切回内容/伪装样式/设置/退出
-  createTray({
+  tray = createTray({
     getWindow: () => win,
     getMode: () => mode,
     setMode: (m) => { mode = m; win.webContents.send('mode:set', m); },
