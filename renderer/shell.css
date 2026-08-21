@@ -1,5 +1,12 @@
 /* renderer/shell.css — 壳层骨架布局 */
 
+/* hidden 属性优先于一切作者 display 规则（否则 UA 的 [hidden]{display:none}
+   会被下方 #content-view/#addressbar/#confirm-bar 的 display:flex 覆盖，
+   导致模式切换与初始显隐失效） */
+[hidden] {
+  display: none !important;
+}
+
 /* body 无外边距、全屏、不滚动 */
 html,
 body {
