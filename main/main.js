@@ -41,6 +41,19 @@ app.whenReady().then(() => {
   // 模式切换统一入口：更新 mode 状态 + tabsApi.setMode（ad → detachAll / content → attach 当前标签）
   // + Ruling Z：窗口 setBounds 到该模式的记忆尺寸（window 模块顶层 require，无循环依赖）
   const applyMode = (m) => { mode = m; tabsApi.setMode(m); windowApi.applyBoundsForMode(m, userDataDir); };
+
+  // 悬停揭示（brainstorming 2026-08-21）：鼠标悬停窗口显示内容、移开立即切回伪装。
+  // 立即切换（用户裁定）；设置开关 hoverReveal 可关（默认开）。主进程驱动 →
+  // 需显式推送 mode:set 让壳层同步 DOM（与托盘/热键路径一致）。
+  const hoverEnabled = () => store.loadSettings(userDataDir).hoverReveal !== false;
+  win.on('mouse-enter', () => {
+    if (win.isDestroyed()) return;
+    if (hoverEnabled() && mode === 'ad') { applyMode('content'); win.webContents.send('mode:set', 'content'); }
+  });
+  win.on('mouse-leave', () => {
+    if (win.isDestroyed()) return;
+    if (hoverEnabled() && mode === 'content') { applyMode('ad'); win.webContents.send('mode:set', 'ad'); }
+  });
   ipc.register({
     userDataDir,
     shellWin,

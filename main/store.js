@@ -11,6 +11,7 @@ function defaultSettings() {
     reader: { fontSize: 16, fontFamily: 'yahei', dark: false },
     lastTabs: [],
     lastNovels: {}, // Task 12：novelId → Novel 元数据（会话恢复时重建 novelsMeta）
+    hoverReveal: true, // 悬停揭示（brainstorming 2026-08-21）：鼠标悬停显示内容、移开立即伪装
   };
 }
 

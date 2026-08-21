@@ -19,6 +19,7 @@ async function buildSettingsForm() {
     <div class="row"><label>默认伪装样式</label><select id="ad-style">
       ${['news','game','prize','sys'].map(k => `<option value="${k}" ${s.adStyle === k ? 'selected' : ''}>${k}</option>`).join('')}
     </select></div>
+    <div class="row"><label>鼠标悬停显示内容</label><input id="hk-hover" type="checkbox" ${s.hoverReveal !== false ? 'checked' : ''}></div>
     <p id="hk-msg" style="color:#c00"></p>
     <div class="row"><button id="set-save">保存</button><button id="set-close">关闭</button></div>`;
   // 热键捕获：点击输入框后按键组合写入
@@ -43,6 +44,7 @@ async function buildSettingsForm() {
   document.getElementById('set-save').onclick = async () => {
     const s2 = await window.api.invoke('settings:get');
     s2.adStyle = document.getElementById('ad-style').value;
+    s2.hoverReveal = document.getElementById('hk-hover').checked;
     await window.api.invoke('settings:save', s2);
     renderAd(s2.adStyle);
     modal.hidden = true;
