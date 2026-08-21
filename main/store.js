@@ -4,7 +4,8 @@ const path = require('path');
 
 function defaultSettings() {
   return {
-    windowBounds: null,
+    adBounds: null, // Ruling Z：伪装模式窗口尺寸记忆（默认 340×280）
+    contentBounds: null, // Ruling Z：内容模式窗口尺寸记忆（默认 1150×750）
     adStyle: 'news',
     hotkeys: { toggleWindow: 'Ctrl+Shift+Z', toggleMode: 'Ctrl+Shift+X' },
     reader: { fontSize: 16, fontFamily: 'yahei', dark: false },
@@ -41,7 +42,7 @@ function loadSettings(dir) {
   const raw = readJson(dir, 'settings.json');
   const d = defaultSettings();
   if (!raw) return d;
-  return {
+  const s = {
     ...d,
     ...raw,
     hotkeys: { ...d.hotkeys, ...(raw.hotkeys || {}) },
@@ -49,6 +50,11 @@ function loadSettings(dir) {
     lastTabs: Array.isArray(raw.lastTabs) ? raw.lastTabs : [],
     lastNovels: raw.lastNovels && typeof raw.lastNovels === 'object' && !Array.isArray(raw.lastNovels) ? raw.lastNovels : {},
   };
+  // Ruling Z 迁移：旧版单一 windowBounds → 伪装模式 adBounds。
+  // 仅当旧字段存在且新槽位空缺时迁移（undefined 显式写入时 !s.adBounds 同样兜住），
+  // 不覆盖已有 adBounds。
+  if (raw.windowBounds && !s.adBounds) s.adBounds = raw.windowBounds;
+  return s;
 }
 
 function saveSettings(settings, dir) { writeJson(dir, 'settings.json', settings); }

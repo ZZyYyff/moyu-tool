@@ -1,7 +1,7 @@
 // main/main.js
 const path = require('path');
 const { app, ipcMain } = require('electron');
-const { createMainWindow } = require('./window');
+const windowApi = require('./window');
 const ipc = require('./ipc');
 const store = require('./store');
 const createTray = require('./tray');
@@ -13,7 +13,7 @@ let win, mode = 'ad';
 let tray = null; // 模块级引用，防止托盘对象被 GC 后图标消失
 
 app.whenReady().then(() => {
-  win = createMainWindow(userDataDir);
+  win = windowApi.createMainWindow(userDataDir, { getMode: () => mode });
   const shellWin = win; // 壳层即主窗口
   // Task 12：lastTabs 持久化 —— 内容比较去重：只在标签集合或 web 标签 url 实际变化时写盘。
   // 激活/标题变化虽触发 tabs:changed，但映射后内容不变 → 零写盘（去重选择，报告说明）。
@@ -39,7 +39,8 @@ app.whenReady().then(() => {
     },
   });
   // 模式切换统一入口：更新 mode 状态 + tabsApi.setMode（ad → detachAll / content → attach 当前标签）
-  const applyMode = (m) => { mode = m; tabsApi.setMode(m); };
+  // + Ruling Z：窗口 setBounds 到该模式的记忆尺寸（window 模块顶层 require，无循环依赖）
+  const applyMode = (m) => { mode = m; tabsApi.setMode(m); windowApi.applyBoundsForMode(m, userDataDir); };
   ipc.register({
     userDataDir,
     shellWin,

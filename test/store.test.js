@@ -15,6 +15,8 @@ test('loadSettings 文件缺失时返回默认值', () => {
   withTempDir(dir => {
     const s = store.loadSettings(dir);
     assert.equal(s.adStyle, 'news');
+    assert.equal(s.adBounds, null); // Ruling Z：双尺寸记忆默认均为 null
+    assert.equal(s.contentBounds, null);
     assert.equal(s.hotkeys.toggleWindow, 'Ctrl+Shift+Z');
     assert.equal(s.hotkeys.toggleMode, 'Ctrl+Shift+X');
     assert.equal(s.reader.fontSize, 16);
@@ -45,6 +47,27 @@ test('lastNovels 非法形状（数组/非对象）回落默认 {}', () => {
     assert.deepEqual(store.loadSettings(dir).lastNovels, {});
     store.saveSettings({ lastNovels: 'nope' }, dir);
     assert.deepEqual(store.loadSettings(dir).lastNovels, {});
+  });
+});
+
+test('Ruling Z 迁移：旧格式 windowBounds → adBounds，contentBounds 为 null', () => {
+  withTempDir(dir => {
+    const legacy = { windowBounds: { x: 10, y: 20, width: 340, height: 280 }, adStyle: 'game' };
+    store.saveSettings(legacy, dir);
+    const s = store.loadSettings(dir);
+    assert.deepEqual(s.adBounds, legacy.windowBounds);
+    assert.equal(s.contentBounds, null);
+    assert.equal(s.adStyle, 'game'); // 其余字段照常合并
+  });
+});
+
+test('Ruling Z 迁移：已有 adBounds 时 windowBounds 不覆盖', () => {
+  withTempDir(dir => {
+    store.saveSettings(
+      { windowBounds: { x: 10, y: 20, width: 340, height: 280 }, adBounds: { x: 1, y: 2, width: 300, height: 250 } },
+      dir
+    );
+    assert.deepEqual(store.loadSettings(dir).adBounds, { x: 1, y: 2, width: 300, height: 250 });
   });
 });
 
