@@ -18,4 +18,5 @@ window.api.on('mode:set', (mode) => {
 window.api.invoke('shell:ready').then(({ settings, mode }) => {
   window.__settings = settings;
   setMode(mode);
+  initAd(); // 广告伪装视图渲染（Task 5；shell:ready 后调用保证 settings 可用）
 });

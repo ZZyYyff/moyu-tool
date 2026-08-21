@@ -1,0 +1,18 @@
+{
+  "news": {
+    "name": "新闻资讯流",
+    "html": "<div class=\"ad-top\"><b>☰ 今日热点</b><span>热点资讯</span><button class=\"ad-close\" data-action=\"close\">✕</button></div><div class=\"ad-list\"><span class=\"tag hot\">重磅</span> 最新政策出台，与每个人有关<span class=\"tag shock\">震惊</span> 某公司员工摸鱼被曝光<span class=\"tag exp\">专家</span> 专家建议：晚饭别吃太饱<span class=\"tag tip\">注意</span> 手机出现这3个信号，赶紧换<span class=\"tag money\">理财</span> 退休金新规下月实施</div><button class=\"ad-corner\" data-action=\"menu\">﹀</button>"
+  },
+  "game": {
+    "name": "游戏广告",
+    "html": "<div class=\"ad-top\">🔥 新服开区 · 爆率翻倍 🔥</div><div class=\"ad-body\"><span class=\"ad-emoji\">⚔️</span><div class=\"ad-title\">一刀999级</div><div class=\"ad-sub\">开局一把刀 装备全靠爆</div><button class=\"ad-cta\">⚡ 立即下载 · 送万元元宝 ⚡</button><div class=\"ad-gifts\">登录即送：神装×10 金币×88888</div></div><button class=\"ad-close\" data-action=\"close\">✕</button><button class=\"ad-corner\" data-action=\"menu\">﹀</button>"
+  },
+  "prize": {
+    "name": "恭喜中奖",
+    "html": "<div class=\"ad-top\">🎉 恭喜您！抽中 iPhone 15 Pro Max 🎉</div><div class=\"ad-body\"><span class=\"ad-emoji\">📱</span><div class=\"ad-title\">豪华大礼包</div><div class=\"ad-sub\">价值 ¥9999 · 仅限今日领取</div><button class=\"ad-cta\">点击领取我的大礼包</button></div><button class=\"ad-close\" data-action=\"close\">✕</button><button class=\"ad-corner\" data-action=\"menu\">﹀</button>"
+  },
+  "sys": {
+    "name": "系统通知",
+    "html": "<div class=\"ad-top\"><span>🛡️</span> Windows 安全中心<button class=\"ad-close\" data-action=\"close\">✕</button></div><div class=\"ad-body\"><span class=\"ad-emoji\">🛡️</span><div><b>安全更新已准备就绪</b><p>已下载 Windows 安全更新 (KB5034123)。建议立即重启以完成安装。</p></div></div><div class=\"ad-btns\"><button class=\"ad-btn\">稍后提醒</button><button class=\"ad-btn primary\">立即重启</button></div><button class=\"ad-corner\" data-action=\"menu\">﹀</button>"
+  }
+}

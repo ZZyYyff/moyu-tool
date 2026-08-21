@@ -1,0 +1,230 @@
+/* renderer/ad/ad.css — 广告伪装视图 4 套样式（news/game/prize/sys）+ 隐蔽入口菜单 */
+
+/* ===== 通用骨架 ===== */
+.ad {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  font-family: "Microsoft YaHei", sans-serif;
+}
+
+.ad .ad-top {
+  height: 34px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: bold;
+  padding: 0 10px;
+}
+
+/* 广告主体：整块为窗口拖拽区（无边框窗口靠它移动） */
+.ad .ad-body {
+  position: absolute;
+  top: 40px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  -webkit-app-region: drag;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.ad button {
+  -webkit-app-region: no-drag;
+  cursor: pointer;
+}
+
+/* 假关闭按钮 ×（只发 window:hide，绝不关闭窗口） */
+.ad .ad-close {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, .35);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1;
+}
+
+/* 隐蔽入口：右下角装饰小按钮 ﹀ */
+.ad .ad-corner {
+  position: absolute;
+  right: 4px;
+  bottom: 2px;
+  width: 18px;
+  height: 18px;
+  border: none;
+  background: transparent;
+  color: rgba(0, 0, 0, .25);
+  font-size: 12px;
+}
+
+/* ===== 1. 新闻资讯流（默认，蓝白标题流） ===== */
+.ad.news .ad-top {
+  background: linear-gradient(90deg, #1677ff, #0a5adf);
+  color: #fff;
+}
+.ad.news .ad-list {
+  position: absolute;
+  top: 40px;
+  left: 10px;
+  right: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12px;
+  color: #333;
+  /* news 版 html 无 .ad-body，列表区即拖拽区（保证默认样式下窗口可拖动） */
+  -webkit-app-region: drag;
+}
+.ad.news .tag {
+  font-size: 10px;
+  padding: 1px 4px;
+  border-radius: 2px;
+  color: #fff;
+  margin-right: 4px;
+}
+.ad.news .hot { background: #ff4d4f; }
+.ad.news .shock { background: #fa8c16; }
+.ad.news .exp { background: #1677ff; }
+.ad.news .tip { background: #52c41a; }
+.ad.news .money { background: #722ed1; }
+
+/* ===== 2. 游戏广告（暗红渐变 + 金色大字） ===== */
+.ad.game {
+  background: radial-gradient(ellipse at 30% 0%, #7a1f1f 0%, #4a0e0e 45%, #2a0606 100%);
+  color: #ffd76a;
+}
+.ad.game .ad-top {
+  background: linear-gradient(90deg, #ff8a00, #ff3d00);
+  color: #fff;
+  justify-content: center;
+}
+.ad.game .ad-title {
+  font-size: 34px;
+  font-weight: 900;
+  color: #ffd76a;
+  text-shadow: 0 2px 0 #b06a00, 0 4px 10px rgba(255, 150, 0, .6);
+  letter-spacing: 4px;
+}
+.ad.game .ad-cta,
+.ad.prize .ad-cta {
+  margin-top: 8px;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 26px;
+  font-size: 15px;
+  font-weight: bold;
+}
+.ad.game .ad-cta {
+  background: linear-gradient(180deg, #ffe259, #ffa751);
+  color: #5c2d00;
+}
+.ad .ad-gifts {
+  font-size: 11px;
+  color: #ffd76a;
+}
+
+/* ===== 3. 恭喜中奖（红白风 + 领取按钮） ===== */
+.ad.prize {
+  background: #fff;
+  color: #333;
+}
+.ad.prize .ad-top {
+  background: linear-gradient(90deg, #ff416c, #ff4b2b);
+  color: #fff;
+  justify-content: center;
+}
+.ad.prize .ad-title {
+  font-size: 22px;
+  font-weight: bold;
+  color: #e02b12;
+}
+.ad.prize .ad-cta {
+  background: linear-gradient(90deg, #ff416c, #ff4b2b);
+  color: #fff;
+}
+.ad.prize .ad-sub {
+  color: #888;
+}
+
+/* ===== 4. 系统通知（仿 Windows 10 安全中心） ===== */
+.ad.sys {
+  background: #f6f7f9;
+  color: #333;
+}
+.ad.sys .ad-top {
+  background: #fff;
+  border-bottom: 1px solid #e8eaee;
+  font-size: 12px;
+}
+.ad.sys .ad-body {
+  flex-direction: row;
+  justify-content: flex-start;
+  padding: 0 14px;
+  gap: 12px;
+  align-items: center;
+}
+.ad.sys .ad-btns {
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  display: flex;
+  gap: 8px;
+}
+.ad.sys .ad-btn {
+  border: 1px solid #b6bcc4;
+  background: #fff;
+  font-size: 12px;
+  padding: 4px 14px;
+  border-radius: 3px;
+}
+.ad.sys .ad-btn.primary {
+  background: #1677ff;
+  border-color: #1677ff;
+  color: #fff;
+}
+
+/* ===== 通用元素 ===== */
+.ad .ad-emoji { font-size: 44px; }
+.ad .ad-sub { font-size: 13px; }
+
+/* ===== 隐蔽入口菜单（右下角 ﹀ 弹出，位于 #menu 容器） ===== */
+#menu {
+  position: absolute;
+  z-index: 30;
+  min-width: 150px;
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  background: #fff;
+  border: 1px solid #e0e2e6;
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .18);
+  font-size: 12px;
+}
+#menu button {
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: #333;
+  cursor: pointer;
+  border-radius: 4px;
+  -webkit-app-region: no-drag;
+}
+#menu button:hover {
+  background: #f0f4fa;
+  color: #1677ff;
+}
+/* 样式子菜单（嵌套按钮）缩进 */
+#menu button button { padding-left: 18px; }
