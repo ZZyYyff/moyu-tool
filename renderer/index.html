@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="shell.css">
+  <title>摸鱼</title>
+</head>
+<body data-mode="ad">
+  <div id="ad-view"></div>
+  <div id="content-view" hidden>
+    <header id="tabbar"></header>
+    <div id="addressbar" hidden>
+      <button id="addr-back">←</button><button id="addr-fwd">→</button><button id="addr-reload">↻</button>
+      <input id="addr-input" placeholder="输入网址，回车打开">
+    </div>
+    <div id="view-slot"></div>
+    <div id="reader-view" hidden></div>
+  </div>
+  <div id="confirm-bar" hidden>
+    <span id="confirm-text"></span>
+    <button id="confirm-ok">打开</button><button id="confirm-cancel">取消</button>
+  </div>
+  <div id="menu" hidden></div>
+  <div id="settings-modal" hidden></div>
+  <script src="shell.js"></script>
+</body>
+</html>

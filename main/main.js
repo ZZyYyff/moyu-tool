@@ -1,21 +1,21 @@
-const { app, BrowserWindow } = require('electron');
+// main/main.js
+const { app } = require('electron');
+const { createMainWindow } = require('./window');
+const ipc = require('./ipc');
+
+const userDataDir = app.getPath('userData');
+let win, mode = 'ad';
 
 app.whenReady().then(() => {
-  const win = new BrowserWindow({
-    width: 340, height: 280,
-    frame: false,
-    alwaysOnTop: true,
-    resizable: true,
-    minWidth: 300, minHeight: 240,
-    webPreferences: {
-      preload: require('path').join(__dirname, '..', 'preload', 'preload.js'),
-      sandbox: true,
-      contextIsolation: true,
-      nodeIntegration: false,
-    },
+  win = createMainWindow(userDataDir);
+  const shellWin = win; // 壳层即主窗口
+  ipc.register({
+    userDataDir,
+    shellWin,
+    getMode: () => mode,
+    setMode: (m) => { mode = m; },
+    getTabsSnapshot: () => [],
   });
-  win.loadFile('renderer/index.html');
-  win.setAlwaysOnTop(true, 'screen-saver');
   win.on('closed', () => app.quit());
 });
 

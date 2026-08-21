@@ -1,0 +1,128 @@
+/* renderer/shell.css — 壳层骨架布局 */
+
+/* body 无外边距、全屏、不滚动 */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: "Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
+  font-size: 14px;
+  color: #333;
+  background: #f5f6f8;
+  user-select: none;
+}
+
+/* 广告视图：全屏铺底（内容由 Task 5 填充） */
+#ad-view {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+}
+
+/* 内容视图：全屏，纵向 flex 布局 */
+#content-view {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+}
+
+/* 标签栏：顶部固定 */
+#tabbar {
+  flex: 0 0 auto;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  background: #2b2d31;
+  color: #eee;
+}
+
+/* 地址栏：标签栏下方一行 */
+#addressbar {
+  flex: 0 0 auto;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px;
+  background: #f0f1f3;
+  border-bottom: 1px solid #ddd;
+}
+
+#addressbar button {
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  padding: 2px 6px;
+  cursor: pointer;
+  color: #333;
+}
+
+#addr-input {
+  flex: 1;
+  height: 24px;
+  border: 1px solid #ccc;
+  border-radius: 12px;
+  padding: 0 10px;
+  outline: none;
+  font-size: 13px;
+}
+
+/* 视图槽：主进程把 WebContentsView 叠在这里，占满剩余空间 */
+#view-slot {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* 阅读器视图（Task 9 填充） */
+#reader-view {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  background: #fff;
+}
+
+/* 确认条（拖放/打开外部链接确认，Task 11 使用） */
+#confirm-bar {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(30, 30, 30, 0.92);
+  color: #fff;
+  border-radius: 6px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+}
+
+#confirm-bar button {
+  border: none;
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+#confirm-ok {
+  background: #4a90d9;
+  color: #fff;
+}
+
+#confirm-cancel {
+  background: #555;
+  color: #fff;
+}
