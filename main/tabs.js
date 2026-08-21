@@ -31,16 +31,62 @@ module.exports = function initTabManager({ win, userDataDir, notify }) {
 
   function layout() {
     const v = currentView();
-    if (v && mode === 'content') v.setBounds(viewBounds());
+    if (v && mode === 'content') {
+      v.setBounds(viewBounds());
+      fitToWindow(tabs.get(activeId)); // 用户反馈修复：缩放适配（防抖，仅溢出时生效）
+    }
+  }
+
+  // 用户反馈修复：小窗口下固定布局站点（如 B 站 min-width 1100px）内容溢出视口，
+  // "网页不完整"。设计要点（探针实测修正）：
+  // - 缩放后页面会在更大 CSS 视口里重新排版填满，测量值随 zoom 漂移 → 只在 zoom=1
+  //   时测量并记忆页面真实宽度 tab.fitNeed；缩放期间凭记忆判断，永不振荡。
+  // - 恢复带 5% 迟滞：物理宽度 >= fitNeed*1.05 才回 1:1。
+  // - 响应式站点 zoom=1 时无溢出 → 永不触发。
+  let fitTimer = null;
+  function fitToWindow(tab) {
+    const view = tab && tab.view;
+    if (!view || view.webContents.isDestroyed()) return;
+    clearTimeout(fitTimer);
+    fitTimer = setTimeout(async () => {
+      const wc = view.webContents;
+      try {
+        const m = await wc.executeJavaScript(
+          '({ cw: document.documentElement.clientWidth, sw: document.documentElement.scrollWidth })'
+        );
+        if (typeof m.cw !== 'number' || typeof m.sw !== 'number' || !m.cw) return;
+        const zoom = wc.getZoomFactor();
+        if (zoom >= 0.999) {
+          if (m.sw > m.cw + 20) {
+            tab.fitNeed = m.sw; // 记忆 zoom=1 时的真实内容宽度
+            wc.setZoomFactor(Math.max(0.25, m.cw / m.sw)); // 溢出 → 缩小到恰好容纳（下限 0.25）
+          } else {
+            tab.fitNeed = null;
+          }
+        } else if (tab.fitNeed && m.cw * zoom >= tab.fitNeed * 1.03) {
+          // 物理宽度 >= 记忆宽度×1.03 → 恢复 1:1 并重新评估（3% 迟滞：默认内容窗
+          // 1150px 对 B 站 1100px min-width 恰好能复位；5% 时差 3px 卡住 —— 探针实测修正。
+          // 复位后重排一轮：fitNeed 会更新为真实宽度，收敛无振荡）
+          wc.setZoomFactor(1);
+          fitToWindow(tab);
+        } else if (m.sw > m.cw + 20) {
+          // 已缩放但仍溢出：记忆的 fitNeed 过期（懒加载/二次布局）→ 重置重测，一轮收敛
+          wc.setZoomFactor(1);
+          tab.fitNeed = null;
+          fitToWindow(tab);
+        }
+      } catch { /* 页面不可评估（导航中/已卸载）忽略 */ }
+    }, 150);
   }
 
   function attach() {
     const t = tabs.get(activeId);
     if (!t || t.type !== 'web' || !t.view || mode !== 'content') return;
     if (t.failed) return; // 加载失败的标签不挂视图，让 DOM 错误页可见（仅 tabs:reload-active 重试成功后恢复）
-    if (win.contentView.children.includes(t.view)) { t.view.setBounds(viewBounds()); return; } // 已挂载：只更新 bounds
+    if (win.contentView.children.includes(t.view)) { t.view.setBounds(viewBounds()); fitToWindow(t); return; } // 已挂载：只更新 bounds
     win.contentView.addChildView(t.view);
     t.view.setBounds(viewBounds());
+    fitToWindow(t); // 挂载后立即评估缩放（attach 不走 layout，探针实测缺这一步 fit 不触发）
   }
 
   function detachAll() {
@@ -94,6 +140,12 @@ module.exports = function initTabManager({ win, userDataDir, notify }) {
       if (tab.failed) { tab.failed = false; if (activeId === id) attach(); }
     });
     view.webContents.on('page-title-updated', (_e, t) => { tab.title = t; push(); });
+    // 加载完成后重置缩放并按 zoom=1 重新测量适配（等布局稳定，懒加载站点可能二次布局）
+    view.webContents.on('did-finish-load', () => {
+      view.webContents.setZoomFactor(1);
+      tab.fitNeed = null;
+      setTimeout(() => fitToWindow(tab), 1500);
+    });
     activateTab(id);
     view.webContents.loadURL(url).catch(() => {});
     return id;
