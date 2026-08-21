@@ -189,20 +189,24 @@ body {
   background: #fff;
 }
 
-/* 确认条（拖放/打开外部链接确认，Task 11 使用） */
+/* 确认条（拖放/打开外部链接确认，Task 11 使用）：
+   顶部居中浮条，高度与 TABBAR_H(34) 对齐 —— WebContentsView 是原生视图、盖在 DOM 之上
+   （content 模式从 y=34 起），浮条必须完全落在 y<34 的 DOM 条带内才不被遮挡；
+   z-index 高于内容区（content-view/ad-view 均无 z-index） */
 #confirm-bar {
   position: fixed;
+  top: 0;
   left: 50%;
-  bottom: 16px;
   transform: translateX(-50%);
+  height: 34px;
   z-index: 10;
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
+  padding: 0 12px;
   background: rgba(30, 30, 30, 0.92);
   color: #fff;
-  border-radius: 6px;
+  border-radius: 0 0 6px 6px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
 }
 

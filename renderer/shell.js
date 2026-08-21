@@ -122,3 +122,34 @@ $('#addr-input').addEventListener('keydown', (e) => {
 $('#addr-back').addEventListener('click', () => window.api.send('tabs:navigate', -1));
 $('#addr-fwd').addEventListener('click', () => window.api.send('tabs:navigate', 1));
 $('#addr-reload').addEventListener('click', () => window.api.send('tabs:reload-active'));
+
+// —— 拖放（Task 11）——
+
+// 窗口级 drop：阻止默认（避免整页导航），识别类型
+window.addEventListener('dragover', (e) => e.preventDefault());
+window.addEventListener('drop', async (e) => {
+  e.preventDefault();
+  const files = [...e.dataTransfer.files];
+  if (files.length === 1 && (files[0].name.endsWith('.txt') || files[0].name.endsWith('.epub'))) {
+    const filePath = window.api.getPathForFile(files[0]);
+    showConfirm(`打开小说《${files[0].name}》？`, async () => {
+      const novel = await window.api.invoke('novels:import', filePath);
+      await window.api.invoke('tabs:create-novel', novel);
+      openNovel(novel);
+    });
+    return;
+  }
+  const text = e.dataTransfer.getData('text/plain') || e.dataTransfer.getData('text/uri-list');
+  if (text && /^https?:\/\//i.test(text.trim())) {
+    const url = text.trim().split('\n')[0];
+    showConfirm(`打开 ${url.slice(0, 50)}？`, () => window.api.invoke('tabs:create', url));
+  }
+});
+
+function showConfirm(text, onOk) {
+  $('#confirm-text').textContent = text;
+  $('#confirm-ok').onclick = () => { hideConfirm(); onOk(); };
+  $('#confirm-cancel').onclick = hideConfirm;
+  $('#confirm-bar').hidden = false;
+}
+function hideConfirm() { $('#confirm-bar').hidden = true; }
