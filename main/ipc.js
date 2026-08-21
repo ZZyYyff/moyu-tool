@@ -9,8 +9,8 @@ const novels = require('./novels');
 const novelsMeta = new Map();
 
 // 注册底座 IPC 通道。参数由 main.js 装配时注入：
-// { userDataDir, shellWin, getMode, setMode, getTabsSnapshot }
-function register({ userDataDir, shellWin, getMode, setMode, getTabsSnapshot }) {
+// { userDataDir, shellWin, getMode, setMode, getTabsSnapshot, tabs }
+function register({ userDataDir, shellWin, getMode, setMode, getTabsSnapshot, tabs }) {
   ipcMain.handle('shell:ready', () => ({
     settings: store.loadSettings(userDataDir),
     mode: getMode(),
@@ -18,6 +18,22 @@ function register({ userDataDir, shellWin, getMode, setMode, getTabsSnapshot }) 
   }));
   ipcMain.on('mode:set', (_e, mode) => setMode(mode));
   ipcMain.handle('settings:get', () => store.loadSettings(userDataDir));
+
+  // —— 多标签（Task 10）——
+  ipcMain.handle('tabs:create', (_e, url) => tabs.createWebTab(url));
+  ipcMain.handle('tabs:create-novel', (_e, novel) => tabs.createNovelTab(novel));
+  ipcMain.on('tabs:close', (_e, id) => tabs.closeTab(id));
+  ipcMain.on('tabs:activate', (_e, id) => tabs.activateTab(id));
+  ipcMain.on('tabs:navigate', (_e, d) => tabs.navigate(d));
+  ipcMain.on('tabs:reload-active', () => {
+    const t = tabs.getTab(tabs.getActiveTabId());
+    if (t && t.view) {
+      t.failed = false; // 重试意图：成功则 did-finish-load 恢复挂载；再失败则 did-fail-load 重新置位
+      t.view.webContents.reload();
+    }
+  });
+  // 地址栏显隐同步主进程（brief 缺口补接）：显示时视图下移 ADDRBAR_H，避免网页盖住地址栏
+  ipcMain.on('tabs:address-bar', (_e, visible) => tabs.setAddressBarVisible(visible));
   ipcMain.handle('settings:save', (_e, partial) => {
     const s = { ...store.loadSettings(userDataDir), ...partial };
     store.saveSettings(s, userDataDir);

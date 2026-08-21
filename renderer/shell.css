@@ -41,16 +41,106 @@ body {
   background: #fff;
 }
 
-/* 标签栏：顶部固定 */
+/* 标签栏：顶部固定（高度与主进程 TABBAR_H=34 对齐，保证 WebContentsView 起始 y 与 DOM 一致） */
 #tabbar {
   flex: 0 0 auto;
-  height: 36px;
+  height: 34px;
   display: flex;
   align-items: center;
   gap: 6px;
   padding: 0 8px;
   background: #2b2d31;
   color: #eee;
+}
+
+/* 标签页（Task 10）：标题省略 + 激活高亮 + × 关闭 */
+#tabbar .tab {
+  max-width: 160px;
+  min-width: 56px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: #3a3d42;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+#tabbar .tab.active {
+  background: #4a90d9;
+}
+
+#tabbar .tab > span {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+#tabbar .tab button {
+  flex: 0 0 auto;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  padding: 0 3px;
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+#tabbar .tab button:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+#tabbar .plus {
+  margin-left: auto;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 4px;
+  background: #3a3d42;
+  color: #eee;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+#tabbar .plus:hover {
+  background: #4a90d9;
+}
+
+/* 空状态提示（无标签时） */
+#view-slot .empty {
+  margin-top: 72px;
+  text-align: center;
+  color: #999;
+  font-size: 14px;
+}
+
+/* 网页加载失败错误页（tab:error） */
+#view-slot .errpage {
+  margin: 72px auto 0;
+  max-width: 420px;
+  padding: 0 16px;
+  text-align: center;
+  color: #c0392b;
+  font-size: 13px;
+  line-height: 1.8;
+  word-break: break-all;
+}
+
+#view-slot .errpage button {
+  margin-top: 12px;
+  border: 1px solid #4a90d9;
+  background: #fff;
+  color: #4a90d9;
+  border-radius: 4px;
+  padding: 4px 20px;
+  font-size: 13px;
+  cursor: pointer;
 }
 
 /* 地址栏：标签栏下方一行 */

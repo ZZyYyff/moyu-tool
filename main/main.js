@@ -5,6 +5,7 @@ const ipc = require('./ipc');
 const store = require('./store');
 const createTray = require('./tray');
 const hotkeys = require('./hotkeys');
+const initTabManager = require('./tabs');
 
 const userDataDir = app.getPath('userData');
 let win, mode = 'ad';
@@ -13,12 +14,24 @@ let tray = null; // 模块级引用，防止托盘对象被 GC 后图标消失
 app.whenReady().then(() => {
   win = createMainWindow(userDataDir);
   const shellWin = win; // 壳层即主窗口
+  // Task 10：WebContentsView 多标签管理（notify 把标签快照/加载错误推给壳层渲染）
+  const tabsApi = initTabManager({
+    win,
+    userDataDir,
+    notify: (msg) => {
+      if (msg.type === 'tabs:changed') win.webContents.send('tabs:changed', msg);
+      if (msg.type === 'tab:error') win.webContents.send('tab:error', msg);
+    },
+  });
+  // 模式切换统一入口：更新 mode 状态 + tabsApi.setMode（ad → detachAll / content → attach 当前标签）
+  const applyMode = (m) => { mode = m; tabsApi.setMode(m); };
   ipc.register({
     userDataDir,
     shellWin,
     getMode: () => mode,
-    setMode: (m) => { mode = m; },
-    getTabsSnapshot: () => [],
+    setMode: applyMode,
+    getTabsSnapshot: () => tabsApi.getSnapshot(),
+    tabs: tabsApi,
   });
 
   // 假关闭按钮 → 真正收进托盘（Task 5 遗留的 handler）
@@ -28,7 +41,7 @@ app.whenReady().then(() => {
   tray = createTray({
     getWindow: () => win,
     getMode: () => mode,
-    setMode: (m) => { mode = m; win.webContents.send('mode:set', m); },
+    setMode: (m) => { applyMode(m); win.webContents.send('mode:set', m); },
     switchStyle: (key) => {
       // 复用 ipc settings:save 的逻辑：合并保存 + 通知壳层重渲染
       const s = { ...store.loadSettings(userDataDir), adStyle: key };
@@ -44,13 +57,13 @@ app.whenReady().then(() => {
   hotkeys.setCallbacks({
     toggleWindow: () => win.isVisible() ? win.hide() : win.show(),
     toggleMode: () => {
-      mode = mode === 'ad' ? 'content' : 'ad';
+      applyMode(mode === 'ad' ? 'content' : 'ad');
       win.webContents.send('mode:set', mode);
     },
   });
   hotkeys.registerHotkeys({
     getWindow: () => win,
-    toggleMode: () => { mode = mode === 'ad' ? 'content' : 'ad'; win.webContents.send('mode:set', mode); },
+    toggleMode: () => { applyMode(mode === 'ad' ? 'content' : 'ad'); win.webContents.send('mode:set', mode); },
     notifyConflict: (acc) => console.warn('热键冲突，未注册:', acc),
     userDataDir,
   });

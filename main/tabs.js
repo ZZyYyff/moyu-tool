@@ -1,0 +1,140 @@
+// main/tabs.js
+const { WebContentsView } = require('electron');
+
+const TABBAR_H = 34, ADDRBAR_H = 32;
+
+module.exports = function initTabManager({ win, userDataDir, notify }) {
+  let nextId = 1;
+  let activeId = null;
+  let mode = 'ad';
+  const tabs = new Map(); // id -> Tab
+  let addressBarVisible = false;
+
+  const currentView = () => { const t = tabs.get(activeId); return t && t.type === 'web' ? t.view : null; };
+
+  function viewBounds() {
+    const [w, h] = win.getContentSize();
+    const y = TABBAR_H + (addressBarVisible ? ADDRBAR_H : 0);
+    return { x: 0, y, width: w, height: Math.max(0, h - y) };
+  }
+
+  function layout() {
+    const v = currentView();
+    if (v && mode === 'content') v.setBounds(viewBounds());
+  }
+
+  function attach() {
+    const t = tabs.get(activeId);
+    if (!t || t.type !== 'web' || !t.view || mode !== 'content') return;
+    if (t.failed) return; // 加载失败的标签不挂视图，让 DOM 错误页可见（仅 tabs:reload-active 重试成功后恢复）
+    if (win.contentView.children.includes(t.view)) { t.view.setBounds(viewBounds()); return; } // 已挂载：只更新 bounds
+    win.contentView.addChildView(t.view);
+    t.view.setBounds(viewBounds());
+  }
+
+  function detachAll() {
+    for (const t of tabs.values()) if (t.view && win.contentView.children.includes(t.view)) win.contentView.removeChildView(t.view);
+  }
+
+  function setMode(m) { mode = m; if (m === 'ad') detachAll(); else attach(); }
+
+  function createWebTab(url) {
+    const id = nextId++;
+    const view = new WebContentsView({
+      webPreferences: {
+        partition: `persist:tab-${id}`,
+        sandbox: true,
+        nodeIntegration: false,
+        contextIsolation: true,
+      },
+    });
+    const tab = { id, type: 'web', url, title: url, muted: true, failed: false, view };
+    tabs.set(id, tab);
+    view.webContents.setAudioMuted(true);
+    view.webContents.setWindowOpenHandler(({ url: u }) => {
+      if (/^https?:/i.test(u)) createWebTab(u);
+      return { action: 'deny' };
+    });
+    view.webContents.on('will-navigate', (e, u) => {
+      if (!/^https?:/i.test(u)) e.preventDefault();
+    });
+    view.webContents.on('did-fail-load', (e, code, desc, validatedUrl, isMainFrame) => {
+      if (isMainFrame && code !== -3) {
+        e.preventDefault(); // 抑制原生错误页，由 DOM 错误页（tab:error）接管
+        tab.failed = true;
+        if (win.contentView.children.includes(view)) win.contentView.removeChildView(view);
+        notify({ type: 'tab:error', id, code, description: desc, url: validatedUrl });
+      }
+    });
+    // 注意：错误页（chrome-error 提交）也会触发 did-finish-load，此时 tab.failed 仍为 true，
+    // 不能在这里清 failed —— 只有 tabs:reload-active（重试）会清除 failed 并重新挂载。
+    view.webContents.on('did-finish-load', () => { if (!tab.failed && activeId === id) attach(); });
+    view.webContents.on('did-navigate', (_e, u) => { tab.url = u; });
+    view.webContents.on('page-title-updated', (_e, t) => { tab.title = t; push(); });
+    activateTab(id);
+    view.webContents.loadURL(url).catch(() => {});
+    return id;
+  }
+
+  function createNovelTab(novel) {
+    const id = nextId++;
+    tabs.set(id, { id, type: 'novel', novelId: novel.novelId, title: novel.title, muted: true });
+    activateTab(id);
+    return id;
+  }
+
+  function closeTab(id) {
+    const t = tabs.get(id);
+    if (!t) return;
+    if (t.type === 'web' && t.view) {
+      if (win.contentView.children.includes(t.view)) win.contentView.removeChildView(t.view);
+      t.view.webContents.close();
+    }
+    tabs.delete(id);
+    if (activeId === id) activeId = tabs.size ? [...tabs.keys()][tabs.size - 1] : null;
+    if (activeId !== null) activateTab(activeId);
+    push();
+  }
+
+  function activateTab(id) {
+    if (!tabs.has(id)) return;
+    if (activeId !== null && activeId !== id) {
+      const prev = tabs.get(activeId);
+      if (prev.type === 'web' && prev.view) {
+        win.contentView.removeChildView(prev.view);
+        prev.view.webContents.setAudioMuted(true);
+      }
+    }
+    activeId = id;
+    const t = tabs.get(id);
+    if (t.type === 'web' && t.view) {
+      t.view.webContents.setAudioMuted(false);
+      attach();
+    }
+    push();
+  }
+
+  function navigate(delta) {
+    const t = tabs.get(activeId);
+    if (t && t.type === 'web' && t.view) {
+      if (delta < 0) t.view.webContents.navigationHistory.goBack();
+      else t.view.webContents.navigationHistory.goForward();
+    }
+  }
+
+  function setAddressBarVisible(v) { addressBarVisible = v; layout(); }
+
+  function getSnapshot() {
+    return [...tabs.values()].map(t => ({ id: t.id, type: t.type, title: t.title, active: t.id === activeId, muted: t.muted }));
+  }
+
+  function push() { notify({ type: 'tabs:changed', tabs: getSnapshot(), activeId }); }
+
+  win.on('resize', layout);
+
+  return {
+    createWebTab, createNovelTab, closeTab, activateTab, getSnapshot,
+    setMode, layout, navigate, getActiveTabId: () => activeId,
+    setAddressBarVisible, getTab: (id) => tabs.get(id),
+  };
+};
