@@ -31,6 +31,10 @@
   font-size: 12px;
   cursor: pointer;
   color: #444;
+  /* 用户反馈修复：阅读器工具栏位于 #tabbar 拖拽区矩形（34px 顶带）内，Electron
+     拖拽区吞掉矩形内所有鼠标事件 —— 按钮必须 no-drag 挖孔（与确认条同款修复）；
+     工具栏中间空白区（.reader-spacer）保留拖拽窗口能力 */
+  -webkit-app-region: no-drag;
 }
 
 #reader-toolbar button:hover {
@@ -84,7 +88,8 @@
 #reader-view[data-font="kai"]  #reader-content { font-family: "KaiTi", serif; }
 #reader-view[data-font="yahei"] #reader-content { font-family: "Microsoft YaHei", sans-serif; }
 
-/* 目录浮层：盖住整个阅读器（含工具栏），自带返回按钮 */
+/* 目录浮层：盖住整个阅读器（含工具栏），自带返回按钮。
+   同样位于顶带拖拽区之上 → 整体 no-drag 挖孔，内部按钮才可点 */
 #reader-toc {
   position: absolute;
   inset: 0;
@@ -92,6 +97,7 @@
   display: flex;
   flex-direction: column;
   background: #f7f5ef;
+  -webkit-app-region: no-drag;
 }
 
 #reader-toc-head {
