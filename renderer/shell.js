@@ -8,9 +8,10 @@ window.__novels = new Map();
 // T10 发出 tabs:changed 快照（activeId + tabs[].type/novelId）后调用本函数。
 function switchActiveTab(type, novelId) {
   const isNovel = type === 'novel';
-  // 终审修复：隐藏阅读器前先立即写盘 —— 否则 2s 防抖在 display:none 下触发会把进度清零
-  // （saveNow 内另有隐藏守卫兜底，见 reader.js）。shell.js 先于 reader.js 加载，调用时已就绪。
-  if (!isNovel && typeof saveNow === 'function') saveNow();
+  // 终审修复：任何切换前先 flush 当前小说进度 —— 切走标签（隐藏阅读器）与小说→小说
+  // 直接换书都会丢失 <2s 防抖内的滚动；saveNow 此刻阅读器仍可见、守卫放行；
+  // 隐藏后待定防抖被守卫跳过也不会覆盖好进度（见 reader.js）。调用时 reader.js 已就绪。
+  if (typeof saveNow === 'function') saveNow();
   $('#reader-view').hidden = !isNovel;
   $('#view-slot').hidden = isNovel;
   if (isNovel && novelId) {
@@ -103,6 +104,9 @@ function renderTabbar(snapshot) {
 }
 
 function showEmptyState() {
+  // 终审修复：关闭最后一个小说标签走此分支，先 flush 进度再隐藏阅读器
+  // （隐藏后 saveNow 守卫会跳过待定防抖，<2s 内的滚动不得丢失）。
+  if (typeof saveNow === 'function') saveNow();
   $('#view-slot').hidden = false;
   $('#reader-view').hidden = true;
   $('#view-slot').innerHTML = '<div class="empty">拖入网址或小说，或点 + 输入网址</div>';
@@ -157,9 +161,10 @@ window.addEventListener('dragover', (e) => e.preventDefault());
 window.addEventListener('drop', async (e) => {
   e.preventDefault();
   const files = [...e.dataTransfer.files];
-  // 终审修复：扩展名比较大小写不敏感（Windows 上 BOOK.TXT 应可拖入）
-  const lowerName = files[0].name.toLowerCase();
-  if (files.length === 1 && (lowerName.endsWith('.txt') || lowerName.endsWith('.epub'))) {
+  // 终审修复：扩展名比较大小写不敏感（Windows 上 BOOK.TXT 应可拖入）；
+  // 必须先判 files.length === 1 再解引用 files[0] —— URL 拖入时 files 为空列表，
+  // 无条件 files[0] 会抛 TypeError，使下方 uri-list 分支（规格 §5.3/§10.2）永远不可达。
+  if (files.length === 1 && /\.(txt|epub)$/i.test(files[0].name.toLowerCase())) {
     const filePath = window.api.getPathForFile(files[0]);
     // 规格 §5.2/§9：超大文件（>50MB）提示，仍可读（解析按章懒读取，渲染不进整文件）
     const big = files[0].size > 50 * 1024 * 1024;
