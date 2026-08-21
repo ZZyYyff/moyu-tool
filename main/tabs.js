@@ -1,7 +1,18 @@
 // main/tabs.js
-const { WebContentsView } = require('electron');
+const { app, WebContentsView } = require('electron');
 
 const TABBAR_H = 34, ADDRBAR_H = 32;
+
+// 用户反馈修复：剥离 UA 中的 "Electron/x.y" 标记。带该标记时，B 站等站点
+// 强制桌面布局（min-width 1100px），窗口再窄也不跟随；普通 Chrome UA 在
+// 窄视口下会切移动布局，页面随窗口缩放 —— 与浏览器体验一致。
+// 注意：app.userAgent 在 app ready 之前是 undefined，main.js 顶层 require 本模块
+// 时求值会崩 —— 惰性计算，且仅在创建标签时（必然在 ready 之后）使用。
+let chromeUA = null;
+function getChromeUA() {
+  if (!chromeUA && app.userAgent) chromeUA = app.userAgent.replace(/\sElectron\/[\d.]+/i, '');
+  return chromeUA;
+}
 
 module.exports = function initTabManager({ win, userDataDir, notify }) {
   let nextId = 1;
@@ -53,6 +64,7 @@ module.exports = function initTabManager({ win, userDataDir, notify }) {
     });
     const tab = { id, type: 'web', url, title: url, muted: true, failed: false, view };
     tabs.set(id, tab);
+    const ua = getChromeUA(); if (ua) view.webContents.setUserAgent(ua);
     view.webContents.setAudioMuted(true);
     view.webContents.setWindowOpenHandler(({ url: u }) => {
       if (/^https?:/i.test(u)) createWebTab(u);
