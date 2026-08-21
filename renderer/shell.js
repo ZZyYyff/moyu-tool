@@ -8,6 +8,9 @@ window.__novels = new Map();
 // T10 发出 tabs:changed 快照（activeId + tabs[].type/novelId）后调用本函数。
 function switchActiveTab(type, novelId) {
   const isNovel = type === 'novel';
+  // 终审修复：隐藏阅读器前先立即写盘 —— 否则 2s 防抖在 display:none 下触发会把进度清零
+  // （saveNow 内另有隐藏守卫兜底，见 reader.js）。shell.js 先于 reader.js 加载，调用时已就绪。
+  if (!isNovel && typeof saveNow === 'function') saveNow();
   $('#reader-view').hidden = !isNovel;
   $('#view-slot').hidden = isNovel;
   if (isNovel && novelId) {
@@ -107,6 +110,9 @@ function showEmptyState() {
 
 // 地址栏显隐：DOM 显隐 + 通知主进程调整视图 bounds（tabs:address-bar）
 function showAddressBar() {
+  // 终审修复：#addressbar 位于 content-view 内，ad 模式下点击角标菜单"输入网址…"
+  // 会落焦点到隐形输入框且无任何反馈 —— 先切回内容模式再显示地址栏。
+  if (document.body.dataset.mode === 'ad') setMode('content');
   $('#addressbar').hidden = false;
   $('#addr-input').focus();
   window.api.send('tabs:address-bar', true);
@@ -151,7 +157,9 @@ window.addEventListener('dragover', (e) => e.preventDefault());
 window.addEventListener('drop', async (e) => {
   e.preventDefault();
   const files = [...e.dataTransfer.files];
-  if (files.length === 1 && (files[0].name.endsWith('.txt') || files[0].name.endsWith('.epub'))) {
+  // 终审修复：扩展名比较大小写不敏感（Windows 上 BOOK.TXT 应可拖入）
+  const lowerName = files[0].name.toLowerCase();
+  if (files.length === 1 && (lowerName.endsWith('.txt') || lowerName.endsWith('.epub'))) {
     const filePath = window.api.getPathForFile(files[0]);
     // 规格 §5.2/§9：超大文件（>50MB）提示，仍可读（解析按章懒读取，渲染不进整文件）
     const big = files[0].size > 50 * 1024 * 1024;

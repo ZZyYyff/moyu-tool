@@ -14,8 +14,19 @@ test('computeProgress 内容不足一屏时比例为 0', () => {
   assert.equal(p.scrollRatio, 0);
 });
 
-test('restoreScroll 返回章节与 0.35 定位比例', () => {
+test('restoreScroll 返回章节与记录的确切比例', () => {
   const r = restoreScroll({ chapterIndex: 5, scrollRatio: 0.8 });
+  assert.equal(r.chapterIndex, 5);
+  assert.equal(r.ratio, 0.8);
+});
+
+test('restoreScroll clamp 边界：1.2 → 0.95、-0.1 → 0', () => {
+  assert.equal(restoreScroll({ chapterIndex: 5, scrollRatio: 1.2 }).ratio, 0.95);
+  assert.equal(restoreScroll({ chapterIndex: 5, scrollRatio: -0.1 }).ratio, 0);
+});
+
+test('restoreScroll 无记录比例（旧数据）回落 0.35', () => {
+  const r = restoreScroll({ chapterIndex: 5 });
   assert.equal(r.chapterIndex, 5);
   assert.equal(r.ratio, 0.35);
 });

@@ -7,7 +7,10 @@ function computeProgress(chapterIndex, scrollTop, clientHeight, scrollHeight) {
   return { chapterIndex, scrollRatio: range <= 0 ? 0 : Math.max(0, Math.min(1, scrollTop / range)), updatedAt: Date.now() };
 }
 function restoreScroll(progress) {
-  return { chapterIndex: progress.chapterIndex, ratio: 0.35 };
+  // 终审修复：规格 §5.2 契约"续读精确定位"优先 —— 恢复记录的确切比例而非固定 0.35；
+  // clamp 到 [0, 0.95] 防落屏底/屏顶；无记录比例（旧数据）回落 0.35 偏上定位。
+  const raw = typeof progress.scrollRatio === 'number' ? progress.scrollRatio : 0.35;
+  return { chapterIndex: progress.chapterIndex, ratio: Math.max(0, Math.min(0.95, raw)) };
 }
 
 // —— 阅读器状态 ——
@@ -32,7 +35,7 @@ async function openNovel(novel) {
   if (saved && typeof saved.chapterIndex === 'number') {
     state.chapterIndex = saved.chapterIndex;
     await loadChapter(saved.chapterIndex);
-    // 滚动定位到章内 35% 处（restoreScroll 语义：偏上定位，防止跳到屏底）
+    // 滚动定位到记录的精确比例（restoreScroll clamp 0~0.95，防落屏底）
     // 伪装模式下 content-view 隐藏 → 阅读器无布局（scrollHeight=0）→ 直接定位无效；
     // 临时显形取得真实滚动范围（同一同步任务内执行，无重绘）后还原，保证 §10.8 位置恢复任意模式成立
     const el = $('#reader-content');
@@ -65,6 +68,11 @@ function scheduleSave() {
 }
 function saveNow() {
   if (!state || !window.__settings) return;
+  // 终审修复：阅读器无布局时跳过写盘。切走小说标签 → reader-view hidden；
+  // 切回伪装模式 → content-view hidden（display:none 下 clientHeight/scrollHeight=0，
+  // computeProgress 会算出 scrollRatio:0 覆盖好进度）。openNovel 恢复流程的临时显形
+  // 不受影响：此刻 reader-view 与 content-view 均可见，守卫放行。
+  if (readerView().hidden || $('#content-view').hidden) return;
   const el = $('#reader-content');
   const p = computeProgress(state.chapterIndex, el.scrollTop, el.clientHeight, el.scrollHeight);
   window.api.invoke('novels:progress', state.novel.novelId, p);

@@ -19,7 +19,12 @@ function readJson(dir, name) {
   try {
     return JSON.parse(fs.readFileSync(file, 'utf8'));
   } catch {
-    if (fs.existsSync(file)) fs.renameSync(file, file + '.bak'); // 损坏则备份
+    // 终审修复：备份 rename 独立 try/catch —— renameSync 失败（.bak 为目录/权限/AV 锁）
+    // 不得从 catch 块逃逸（否则 loadSettings 在启动路径抛异常 → 启动崩溃，
+    // 违反"损坏→默认"契约，spec §9）。失败则放弃备份，继续返回 null。
+    try {
+      if (fs.existsSync(file)) fs.renameSync(file, file + '.bak'); // 损坏则备份
+    } catch { /* 备份失败：放弃备份，仍返回默认值 */ }
     return null;
   }
 }

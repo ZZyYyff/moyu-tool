@@ -58,6 +58,17 @@ test('settings.json 损坏时返回默认并备份损坏文件', () => {
   });
 });
 
+test('settings.json 损坏且 .bak 被目录占用时仍返回默认不抛错', () => {
+  withTempDir(dir => {
+    fs.mkdirSync(dir, { recursive: true });
+    fs.mkdirSync(path.join(dir, 'settings.json.bak')); // 备份目标是目录 → renameSync 失败
+    fs.writeFileSync(path.join(dir, 'settings.json'), '{broken json');
+    const s = store.loadSettings(dir); // 不得抛异常（否则启动崩溃，违反"损坏→默认"契约）
+    assert.equal(s.adStyle, 'news');
+    assert.ok(fs.existsSync(path.join(dir, 'settings.json'))); // 原文件保留（放弃备份）
+  });
+});
+
 test('progress 读写与损坏恢复', () => {
   withTempDir(dir => {
     store.saveProgress({ n1: { chapterIndex: 2, scrollRatio: 0.5, updatedAt: 1 } }, dir);
