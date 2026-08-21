@@ -53,6 +53,38 @@ test('importNovel: GBK 文件导入为 UTF-8 副本并解析章节', async () =>
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
+test('importNovel: epub 导入为 UTF-8 存储 + 增量行号章节（Ruling P）', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'moyu-epub-imp-'));
+  try {
+    const JSZip = require('jszip');
+    const zip = new JSZip();
+    zip.file('META-INF/container.xml', '<?xml version="1.0"?><container><rootfiles><rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles></container>');
+    zip.file('OEBPS/content.opf', '<?xml version="1.0"?><package><metadata><dc:title>测试书</dc:title></metadata><manifest><item id="c1" href="c1.xhtml"/><item id="c2" href="c2.xhtml"/></manifest><spine><itemref idref="c1"/><itemref idref="c2"/></spine></package>');
+    zip.file('OEBPS/c1.xhtml', '<html><body><h1>第一章</h1><p>这是第一章内容。</p></body></html>');
+    zip.file('OEBPS/c2.xhtml', '<html><body><h1>第二章</h1><p>第二章内容。</p></body></html>');
+    const epubPath = path.join(dir, 'book.epub');
+    fs.writeFileSync(epubPath, await zip.generateAsync({ type: 'nodebuffer' }));
+    const novel = await novels.importNovel(epubPath, dir);
+    assert.equal(novel.title, '测试书');
+    assert.equal(novel.encoding, 'utf8');
+    assert.equal(novel.chapterCount, 2);
+    assert.equal(novel.totalLines, 3); // "A\n\nB" → ['A','','B']：块间 '\n\n' 产生 1 个空行
+    assert.equal(novel.chapters[0].startLine, 0);
+    assert.equal(novel.chapters[1].startLine, 2); // 前序块行数 1 + 分隔 1 行
+    const stored = path.join(dir, novel.novelId + '.txt');
+    assert.ok(fs.existsSync(stored));
+    // 存储副本为 UTF-8
+    assert.ok(fs.readFileSync(stored, 'utf8').includes('这是第一章内容'));
+    // [startLine, nextStart) 切片：第一章文本含自身、不含第二章
+    const ch0 = novels.getChapterText(stored, novel.totalLines, novel.chapters[0], novel.chapters[1].startLine);
+    assert.ok(ch0.includes('这是第一章内容'));
+    assert.ok(!ch0.includes('第二章内容'));
+    // 末章（nextStart 缺省 → 切到 totalLines）
+    const ch1 = novels.getChapterText(stored, novel.totalLines, novel.chapters[1]);
+    assert.ok(ch1.includes('第二章内容'));
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
 test('readEpub 解析最小 epub（zip 结构）', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'moyu-epub-'));
   try {

@@ -41,16 +41,25 @@ body {
   background: #fff;
 }
 
-/* 标签栏：顶部固定（高度与主进程 TABBAR_H=34 对齐，保证 WebContentsView 起始 y 与 DOM 一致） */
+/* 标签栏：顶部固定（高度与主进程 TABBAR_H=34 对齐，保证 WebContentsView 起始 y 与 DOM 一致）。
+   Ruling O：内容模式拖拽区 —— 窗口可抓标签栏拖动（标准标题栏体验）；标签/按钮 no-drag 可点 */
 #tabbar {
   flex: 0 0 auto;
   height: 34px;
+  -webkit-app-region: drag;
   display: flex;
   align-items: center;
   gap: 6px;
   padding: 0 8px;
   background: #2b2d31;
   color: #eee;
+}
+
+/* 可交互元素脱离拖拽区（Ruling O）：标签、关闭 ×、+ 按钮均可点击 */
+#tabbar .tab,
+#tabbar .tab button,
+#tabbar > button {
+  -webkit-app-region: no-drag;
 }
 
 /* 标签页（Task 10）：标题省略 + 激活高亮 + × 关闭 */
@@ -226,4 +235,9 @@ body {
 #confirm-cancel {
   background: #555;
   color: #fff;
+}
+
+/* 导入失败反馈（T11 评审）：错误态确认条（红底），下次 showConfirm 清除 */
+#confirm-bar.error {
+  background: rgba(160, 40, 30, 0.95);
 }

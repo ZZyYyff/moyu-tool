@@ -30,6 +30,10 @@ function novelIdFor(srcPath, size) {
 
 async function importNovel(srcPath, novelsDir) {
   fs.mkdirSync(novelsDir, { recursive: true });
+  if (path.extname(srcPath).toLowerCase() === '.epub') {
+    // Ruling P：epub 走独立管线（readEpub 解析，见 importEpub）
+    return importEpub(srcPath, novelsDir, novelIdFor(srcPath, fs.statSync(srcPath).size));
+  }
   const raw = fs.readFileSync(srcPath);
   const encoding = detectEncoding(raw);
   const text = encoding === 'utf8' ? raw.toString('utf8') : iconv.decode(raw, 'gbk');
@@ -40,6 +44,32 @@ async function importNovel(srcPath, novelsDir) {
     novelId,
     title: path.basename(srcPath, path.extname(srcPath)),
     encoding,
+    totalLines: text.split('\n').length,
+    chapterCount: chapters.length,
+    chapters,
+  };
+}
+
+// Ruling P：epub 导入 —— 章节文本块拼成单个 UTF-8 存储文件（块间 '\n\n'），
+// chapters 用增量行号：第 i 块 startLine = 前序块行数之和 + i
+// （块间 '\n\n' 经 split('\n') 产生 1 个空行，故每块推进 块行数 + 1 —— 评审注记的
+// "+2×(i)" 会使末章 startLine 越过 totalLines 切片为空，与"切片语义一致"目标冲突，
+// 以切片不变式为准：startLine 指向该章第一行，分隔符在上一章切片末尾、本章 startLine 之前）。
+async function importEpub(srcPath, novelsDir, novelId) {
+  const book = await readEpub(srcPath);
+  const storedPath = path.join(novelsDir, novelId + '.txt');
+  const text = book.chapters.map(c => c.text).join('\n\n');
+  fs.writeFileSync(storedPath, text, 'utf8');
+  const chapters = [];
+  let startLine = 0;
+  for (const c of book.chapters) {
+    chapters.push({ title: c.title, startLine });
+    startLine += c.text.split('\n').length + 1;
+  }
+  return {
+    novelId,
+    title: book.title,
+    encoding: 'utf8',
     totalLines: text.split('\n').length,
     chapterCount: chapters.length,
     chapters,

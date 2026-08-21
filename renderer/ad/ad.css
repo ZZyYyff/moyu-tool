@@ -11,6 +11,9 @@
 
 .ad .ad-top {
   height: 34px;
+  /* 标题栏式拖拽区（T11 评审 Ruling O）：拖拽区从 body/list 收拢到顶栏，
+     主体区域恢复可接收 drop；.ad button 已全局 no-drag 不受影响 */
+  -webkit-app-region: drag;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -19,14 +22,13 @@
   padding: 0 10px;
 }
 
-/* 广告主体：整块为窗口拖拽区（无边框窗口靠它移动） */
+/* 广告主体：占满剩余区域（非拖拽区，可接收 drop） */
 .ad .ad-body {
   position: absolute;
   top: 40px;
   left: 0;
   right: 0;
   bottom: 0;
-  -webkit-app-region: drag;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -82,8 +84,7 @@
   gap: 8px;
   font-size: 12px;
   color: #333;
-  /* news 版 html 无 .ad-body，列表区即拖拽区（保证默认样式下窗口可拖动） */
-  -webkit-app-region: drag;
+  /* Ruling O：news 版无 .ad-body，列表区原为拖拽区；现统一由 .ad-top 顶栏拖拽，列表区可接收 drop */
 }
 .ad.news .tag {
   font-size: 10px;

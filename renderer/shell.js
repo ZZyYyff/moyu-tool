@@ -133,23 +133,36 @@ window.addEventListener('drop', async (e) => {
   if (files.length === 1 && (files[0].name.endsWith('.txt') || files[0].name.endsWith('.epub'))) {
     const filePath = window.api.getPathForFile(files[0]);
     showConfirm(`打开小说《${files[0].name}》？`, async () => {
-      const novel = await window.api.invoke('novels:import', filePath);
-      await window.api.invoke('tabs:create-novel', novel);
-      openNovel(novel);
+      try {
+        const novel = await window.api.invoke('novels:import', filePath);
+        await window.api.invoke('tabs:create-novel', novel);
+        openNovel(novel);
+      } catch (err) {
+        // 导入失败：确认条保留并置错误文案（红底），避免无反馈
+        showConfirm(`导入失败：${err && err.message ? err.message : err}`, () => hideConfirm());
+        $('#confirm-bar').classList.add('error');
+      }
     });
     return;
   }
   const text = e.dataTransfer.getData('text/plain') || e.dataTransfer.getData('text/uri-list');
-  if (text && /^https?:\/\//i.test(text.trim())) {
-    const url = text.trim().split('\n')[0];
+  // 逐行解析：跳过空行与 '#' 注释行（text/uri-list 规范），取第一个 http(s) 行
+  const url = text ? text.split('\n').map((l) => l.trim()).find((l) => l && !l.startsWith('#') && /^https?:\/\//i.test(l)) : null;
+  if (url) {
     showConfirm(`打开 ${url.slice(0, 50)}？`, () => window.api.invoke('tabs:create', url));
   }
 });
 
 function showConfirm(text, onOk) {
+  $('#confirm-bar').classList.remove('error');
   $('#confirm-text').textContent = text;
   $('#confirm-ok').onclick = () => { hideConfirm(); onOk(); };
   $('#confirm-cancel').onclick = hideConfirm;
   $('#confirm-bar').hidden = false;
 }
-function hideConfirm() { $('#confirm-bar').hidden = true; }
+function hideConfirm() {
+  $('#confirm-bar').hidden = true;
+  // 防双击"打开"二次执行：handler 置空（每次 showConfirm 重新接线，重复拖入安全）
+  $('#confirm-ok').onclick = null;
+  $('#confirm-cancel').onclick = null;
+}
