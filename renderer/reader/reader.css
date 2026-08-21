@@ -1,0 +1,163 @@
+/* renderer/reader/reader.css — 小说阅读器（Task 9）
+   在 index.html 中位于 shell.css 之后加载，同特异性下覆盖壳层 #reader-view 规则 */
+
+#reader-view {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #f7f5ef;
+}
+
+/* 工具栏：目录 / 字号 / 暗色 / 字体 / 返回伪装 */
+#reader-toolbar {
+  flex: 0 0 auto;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  background: #ece8df;
+  border-bottom: 1px solid #d8d4c8;
+  font-size: 12px;
+}
+
+#reader-toolbar button {
+  border: 1px solid #cfc9bb;
+  background: #f7f5ef;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  color: #444;
+}
+
+#reader-toolbar button:hover {
+  background: #fff;
+}
+
+.reader-spacer {
+  flex: 1;
+}
+
+/* 正文区：字号走 CSS 变量 --fs（默认 16px），由 applyReaderPrefs 写入 */
+#reader-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 18px 40px;
+  font-size: var(--fs, 16px);
+  line-height: 1.9;
+  color: #333;
+}
+
+#reader-content h2 {
+  font-size: 1.25em;
+  text-align: center;
+  margin: 14px 0;
+}
+
+/* 暗色：reader-view data-dark 属性驱动 */
+#reader-view[data-dark="true"] {
+  background: #1e1e1e;
+}
+
+#reader-view[data-dark="true"] #reader-toolbar {
+  background: #2a2a2a;
+  border-bottom-color: #3a3a3a;
+}
+
+#reader-view[data-dark="true"] #reader-content {
+  background: #1e1e1e;
+  color: #b8b8b8;
+}
+
+/* 字体：data-font 属性驱动（yahei/song/kai 三档循环） */
+#reader-view[data-font="song"] #reader-content { font-family: "SimSun", serif; }
+#reader-view[data-font="kai"]  #reader-content { font-family: "KaiTi", serif; }
+#reader-view[data-font="yahei"] #reader-content { font-family: "Microsoft YaHei", sans-serif; }
+
+/* 目录浮层：盖住整个阅读器（含工具栏），自带返回按钮 */
+#reader-toc {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  background: #f7f5ef;
+}
+
+#reader-toc-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 8px;
+  background: #ece8df;
+  border-bottom: 1px solid #d8d4c8;
+  font-size: 13px;
+  font-weight: bold;
+  color: #333;
+}
+
+#reader-toc-head button {
+  border: 1px solid #cfc9bb;
+  background: #f7f5ef;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  color: #444;
+}
+
+#reader-toc-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+#reader-toc-list button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: transparent;
+  padding: 6px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  color: #444;
+}
+
+#reader-toc-list button:hover {
+  background: #ece8df;
+}
+
+#reader-toc-list button.current {
+  color: #a0522d;
+  font-weight: bold;
+}
+
+#reader-view[data-dark="true"] #reader-toc {
+  background: #1e1e1e;
+}
+
+#reader-view[data-dark="true"] #reader-toc-head {
+  background: #2a2a2a;
+  border-bottom-color: #3a3a3a;
+  color: #b8b8b8;
+}
+
+#reader-view[data-dark="true"] #reader-toc-list button {
+  color: #b8b8b8;
+}
+
+#reader-view[data-dark="true"] #reader-toc-list button:hover {
+  background: #2a2a2a;
+}
+
+#reader-view[data-dark="true"] #reader-toc-list button.current {
+  color: #e0a080;
+}
