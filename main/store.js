@@ -9,6 +9,7 @@ function defaultSettings() {
     hotkeys: { toggleWindow: 'Ctrl+Shift+Z', toggleMode: 'Ctrl+Shift+X' },
     reader: { fontSize: 16, fontFamily: 'yahei', dark: false },
     lastTabs: [],
+    lastNovels: {}, // Task 12：novelId → Novel 元数据（会话恢复时重建 novelsMeta）
   };
 }
 
@@ -41,6 +42,7 @@ function loadSettings(dir) {
     hotkeys: { ...d.hotkeys, ...(raw.hotkeys || {}) },
     reader: { ...d.reader, ...(raw.reader || {}) },
     lastTabs: Array.isArray(raw.lastTabs) ? raw.lastTabs : [],
+    lastNovels: raw.lastNovels && typeof raw.lastNovels === 'object' && !Array.isArray(raw.lastNovels) ? raw.lastNovels : {},
   };
 }
 

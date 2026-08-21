@@ -72,8 +72,10 @@ module.exports = function initTabManager({ win, userDataDir, notify }) {
     // 评审修正：失败标签的唯一恢复时机是"真实成功导航提交"。实测 chrome-error 提交不触发
     // did-navigate（仅 did-start-navigation/did-finish-load），故这里清 failed 安全：
     // 后退到历史页 / 重试成功 / 页内新导航成功 → 重新挂载；错误页提交 → 不会走到这里。
+    // Task 12：url 变化时 push（tabs:changed → persistTabs 落盘 lastTabs），保证导航后退出能恢复最终地址；
+    // 重试成功（url 未变）不 push —— failed 清除逻辑在 push 之外，不受影响。
     view.webContents.on('did-navigate', (_e, u) => {
-      tab.url = u;
+      if (tab.url !== u) { tab.url = u; push(); }
       if (tab.failed) { tab.failed = false; if (activeId === id) attach(); }
     });
     view.webContents.on('page-title-updated', (_e, t) => { tab.title = t; push(); });
@@ -132,7 +134,8 @@ module.exports = function initTabManager({ win, userDataDir, notify }) {
 
   function getSnapshot() {
     // 含 novelId（brief 代码遗漏，Ruling A 需要）：novel 标签切到阅读器时 switchActiveTab 凭 novelId 查 window.__novels
-    return [...tabs.values()].map(t => ({ id: t.id, type: t.type, title: t.title, active: t.id === activeId, muted: t.muted, novelId: t.novelId }));
+    // Task 12：快照补 url —— persistTabs 持久化 lastTabs 时取 t.url（did-navigate 已维护）
+    return [...tabs.values()].map(t => ({ id: t.id, type: t.type, title: t.title, active: t.id === activeId, muted: t.muted, novelId: t.novelId, url: t.url }));
   }
 
   function push() { notify({ type: 'tabs:changed', tabs: getSnapshot(), activeId }); }

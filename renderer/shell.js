@@ -31,14 +31,34 @@ window.api.on('mode:set', (mode) => {
 });
 
 window.api.invoke('shell:ready').then(({ settings, mode, tabs }) => {
-  window.__settings = settings;
-  setMode(mode);
-  initAd(); // 广告伪装视图渲染（Task 5；shell:ready 后调用保证 settings 可用）
-  // Task 10：启动时按快照渲染标签栏（无标签时显示空状态，保证 + 按钮可用）
-  if (Array.isArray(tabs)) {
-    renderTabbar(tabs);
-    if (tabs.length === 0) showEmptyState();
-  }
+  // 初始化应用延到 window load（T12 发现的 T5 遗留竞态修复）：shell:ready 的 IPC 响应可能在
+  // 后续 <script>（reader.js/ad.js，加载在 shell.js 之后）执行前送达——HTML 解析器在脚本 fetch
+  // 间隙会处理 IPC 消息，此时 initAd/openNovel 尚未定义，直接执行会抛错中断整个恢复链路。
+  // load 保证所有脚本已执行完毕，结果确定；readyState==='complete'（响应晚于 load 到达）则立即执行。
+  const applyInitialState = () => {
+    window.__settings = settings;
+    setMode(mode);
+    initAd(); // 广告伪装视图渲染（Task 5；initAd 内部自行 fetch 主题与 settings，不依赖 __settings）
+    // Task 12：会话恢复 —— lastNovels 重建壳层小说元数据缓存（恢复出的 novel 标签切阅读器时 openNovel 依赖；
+    // 与主进程 novelsMeta 重建对应，见 main.js 恢复循环）
+    const lastNovels = settings && settings.lastNovels;
+    if (lastNovels) for (const novel of Object.values(lastNovels)) {
+      if (novel && novel.novelId) window.__novels.set(novel.novelId, novel);
+    }
+    // Task 10：启动时按快照渲染标签栏（无标签时显示空状态，保证 + 按钮可用）
+    if (Array.isArray(tabs)) {
+      renderTabbar(tabs);
+      if (tabs.length === 0) showEmptyState();
+      else {
+        // Task 12：启动即按快照切视图 —— 恢复的 tabs:changed 可能先于元数据缓存就绪送达
+        // （主进程在渲染器加载前就推送），此处幂等补切；web 标签无副作用。
+        const active = tabs.find((t) => t.active) || tabs[0];
+        switchActiveTab(active.type, active.novelId);
+      }
+    }
+  };
+  if (document.readyState === 'complete') applyInitialState();
+  else window.addEventListener('load', applyInitialState, { once: true });
 });
 
 // 托盘"伪装样式"切换（Task 6）：settings 已持久化，这里重渲染广告视图

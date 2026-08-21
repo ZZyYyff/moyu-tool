@@ -8,6 +8,11 @@ const novels = require('./novels');
 // { novelId: { novel, storedPath } }，novels:chapter 从这里取 storedPath
 const novelsMeta = new Map();
 
+// 存储文件路径约定（import 与 T12 会话恢复重建 novelsMeta 共用，防止两处漂移）
+function novelStoredPath(novelId, userDataDir) {
+  return path.join(userDataDir, 'novels', novelId + '.txt');
+}
+
 // 注册底座 IPC 通道。参数由 main.js 装配时注入：
 // { userDataDir, shellWin, getMode, setMode, getTabsSnapshot, tabs }
 function register({ userDataDir, shellWin, getMode, setMode, getTabsSnapshot, tabs }) {
@@ -45,7 +50,11 @@ function register({ userDataDir, shellWin, getMode, setMode, getTabsSnapshot, ta
   ipcMain.handle('novels:import', async (_e, filePath) => {
     const novel = await novels.importNovel(filePath, path.join(userDataDir, 'novels'));
     // Ruling C：import 成功后登记到内存缓存（T11 拖放 / T12 会话恢复依赖）
-    novelsMeta.set(novel.novelId, { novel, storedPath: path.join(userDataDir, 'novels', novel.novelId + '.txt') });
+    novelsMeta.set(novel.novelId, { novel, storedPath: novelStoredPath(novel.novelId, userDataDir) });
+    // Task 12：元数据持久化进 settings.lastNovels —— 会话恢复时 novelsMeta 从这里重建（同会话重导则覆盖）
+    const s = store.loadSettings(userDataDir);
+    s.lastNovels = { ...(s.lastNovels || {}), [novel.novelId]: novel };
+    store.saveSettings(s, userDataDir);
     return novel;
   });
   ipcMain.handle('novels:chapter', (_e, novelId, chapterIndex) => {
@@ -64,4 +73,4 @@ function register({ userDataDir, shellWin, getMode, setMode, getTabsSnapshot, ta
   });
 }
 
-module.exports = { register };
+module.exports = { register, novelsMeta, novelStoredPath };
