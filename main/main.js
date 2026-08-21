@@ -4,6 +4,7 @@ const { createMainWindow } = require('./window');
 const ipc = require('./ipc');
 const store = require('./store');
 const createTray = require('./tray');
+const hotkeys = require('./hotkeys');
 
 const userDataDir = app.getPath('userData');
 let win, mode = 'ad';
@@ -38,6 +39,23 @@ app.whenReady().then(() => {
   });
 
   win.on('closed', () => app.quit());
+
+  // 全局热键：回调表注入一次，注册/改键共用（Ruling B）
+  hotkeys.setCallbacks({
+    toggleWindow: () => win.isVisible() ? win.hide() : win.show(),
+    toggleMode: () => {
+      mode = mode === 'ad' ? 'content' : 'ad';
+      win.webContents.send('mode:set', mode);
+    },
+  });
+  hotkeys.registerHotkeys({
+    getWindow: () => win,
+    toggleMode: () => { mode = mode === 'ad' ? 'content' : 'ad'; win.webContents.send('mode:set', mode); },
+    notifyConflict: (acc) => console.warn('热键冲突，未注册:', acc),
+    userDataDir,
+  });
 });
+
+app.on('will-quit', () => hotkeys.unregisterHotkeys());
 
 app.on('window-all-closed', () => app.quit());
