@@ -220,6 +220,9 @@ body {
   padding: 0 12px;
   background: rgba(30, 30, 30, 0.92);
   color: #fff;
+  /* 用户反馈修复：确认条压在顶部拖拽区（ad 模式 .ad-top / 内容模式 #tabbar）上方，
+     Electron 拖拽区会吞掉其矩形内所有鼠标事件，按钮点不到 —— 必须挖孔 no-drag */
+  -webkit-app-region: no-drag;
   border-radius: 0 0 6px 6px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
 }
@@ -230,6 +233,8 @@ body {
   padding: 4px 10px;
   font-size: 12px;
   cursor: pointer;
+  /* 同上：个别 Chromium 版本 no-drag 不向子元素传播，按钮自身也挖孔 */
+  -webkit-app-region: no-drag;
 }
 
 #confirm-ok {
