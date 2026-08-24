@@ -46,15 +46,21 @@
 }
 
 /* 正文区：字号走 CSS 变量 --fs（默认 16px）；颜色走 --fc（裁定 AB：自定义色，
-   空值回退 —— 浅色 #333 / 暗色 #b8b8b8），均由 applyReaderPrefs 写入 */
+   空值回退 —— 浅色 #333 / 暗色 #b8b8b8），均由 applyReaderPrefs 写入。
+   用户反馈：隐藏滚动条（滚动功能保留 —— 滚轮/热键/触屏不受影响） */
 #reader-content {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  scrollbar-width: none; /* Firefox */
   padding: 0 18px 40px;
   font-size: var(--fs, 16px);
   line-height: 1.9;
   color: var(--fc, #333);
+}
+
+#reader-content::-webkit-scrollbar {
+  display: none; /* Chromium/Electron */
 }
 
 #reader-content h2 {
