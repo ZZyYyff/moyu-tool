@@ -14,6 +14,8 @@ function switchActiveTab(type, novelId) {
   if (typeof saveNow === 'function') saveNow();
   $('#reader-view').hidden = !isNovel;
   $('#view-slot').hidden = isNovel;
+  // 用户反馈：透明激活态随阅读器可见性联动（网页标签模式隐藏标签栏会断掉切换入口）
+  if (typeof applyReaderPrefs === 'function') applyReaderPrefs();
   if (isNovel && novelId) {
     const novel = window.__novels.get(novelId);
     if (novel && typeof openNovel === 'function') openNovel(novel);

@@ -101,6 +101,14 @@
   display: none;
 }
 
+/* 用户反馈：透明模式下阅读器背景全透，被盖住的顶带（标签栏/地址栏）会透出来 ——
+   透明激活态（content-view 上的 data-transparent，由 applyReaderPrefs 按阅读器可见性维护）
+   时一并隐藏；网页标签模式阅读器隐藏 → 属性为 false → 标签栏恢复 */
+#content-view[data-transparent="true"] #tabbar,
+#content-view[data-transparent="true"] #addressbar {
+  display: none;
+}
+
 #reader-view[data-transparent="true"] #reader-content {
   background: transparent !important;
 }

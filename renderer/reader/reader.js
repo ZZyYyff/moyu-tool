@@ -125,6 +125,9 @@ function applyReaderPrefs(prefs) {
   readerView().dataset.font = prefs.fontFamily;
   readerView().dataset.dark = String(prefs.dark);
   readerView().dataset.transparent = String(!!prefs.transparent); // 裁定 AB
+  // 用户反馈：透明模式下顶带（标签栏/地址栏）会透出来 —— 透明激活态上移到父容器
+  // （阅读器可见时才生效；网页标签模式阅读器隐藏 → 标签栏恢复可用）
+  $('#content-view').dataset.transparent = String(!!prefs.transparent && !readerView().hidden);
   readerView().style.setProperty('--fs', (prefs.fontSize || 16) + 'px');
   readerView().style.setProperty('--fc', prefs.color || ''); // 空 → CSS var 回退
 }
