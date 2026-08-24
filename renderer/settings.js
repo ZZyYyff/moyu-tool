@@ -6,7 +6,13 @@
 function openSettings() {
   const modal = $('#settings-modal');
   modal.hidden = false;
+  window.api.send('ui:panel-open', true); // 用户反馈：面板打开期间悬停隐藏停用
   buildSettingsForm();
+}
+
+function closeSettings() {
+  $('#settings-modal').hidden = true;
+  window.api.send('ui:panel-open', false); // 用户反馈：面板关闭恢复悬停
 }
 
 async function buildSettingsForm() {
@@ -53,7 +59,7 @@ async function buildSettingsForm() {
     s2.hoverReveal = document.getElementById('hk-hover').checked;
     await window.api.invoke('settings:save', s2);
     renderAd(s2.adStyle);
-    modal.hidden = true;
+    closeSettings();
   };
-  document.getElementById('set-close').onclick = () => { modal.hidden = true; };
+  document.getElementById('set-close').onclick = closeSettings;
 }

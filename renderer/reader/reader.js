@@ -109,10 +109,12 @@ function openReaderSettings() {
   const radio = document.querySelector(`#reader-settings input[name="rs-font"][value="${font}"]`);
   if (radio) radio.checked = true;
   $('#reader-settings').hidden = false;
+  window.api.send('ui:panel-open', true); // 用户反馈：面板打开期间悬停隐藏停用
 }
 
 function closeReaderSettings() {
   $('#reader-settings').hidden = true;
+  window.api.send('ui:panel-open', false); // 用户反馈：面板关闭恢复悬停
 }
 
 // 应用阅读偏好到 DOM（T13 设置面板复用，务必保持导出）：

@@ -62,6 +62,7 @@ app.whenReady().then(() => {
   const hoverTimer = setInterval(() => {
     if (win.isDestroyed()) return;
     if (!win.isVisible()) return; // 托盘隐藏期间不判定
+    if (settingsPanelOpen) return; // 设置面板打开期间不判定（用户反馈）
     if (Date.now() - launchedAt < 2000) return;
     const cursor = screen.getCursorScreenPoint();
     const b = win.getBounds();
@@ -102,6 +103,11 @@ app.whenReady().then(() => {
 
   // 假关闭按钮 → 真正收进托盘（Task 5 遗留的 handler）
   ipcMain.on('window:hide', () => win.hide());
+
+  // 用户反馈：设置面板（主设置/阅读设置）打开期间悬停揭示整体停用 ——
+  // 配置到一半鼠标移开时窗口不得缩回广告。渲染层开/关面板时推送状态。
+  let settingsPanelOpen = false;
+  ipcMain.on('ui:panel-open', (_e, open) => { settingsPanelOpen = !!open; });
 
   // 透明模式任意位置拖动窗口（用户反馈）：渲染层 pointerdown 传光标偏移，主进程
   // 轮询 getCursorScreenPoint 移动窗口（offset 保持光标与窗口左上角相对位置不变）。
