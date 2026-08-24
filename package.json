@@ -5,13 +5,35 @@
   "main": "main/main.js",
   "scripts": {
     "start": "electron .",
-    "test": "node --test \"test/**/*.test.js\""
+    "test": "node --test \"test/**/*.test.js\"",
+    "dist": "electron-builder --win portable --publish never"
   },
   "devDependencies": {
-    "electron": "^43.4.1"
+    "electron": "^43.4.1",
+    "electron-builder": "^26.15.3"
   },
   "dependencies": {
     "iconv-lite": "^0.7.3",
     "jszip": "^3.10.1"
+  },
+  "build": {
+    "appId": "com.moyu.tool",
+    "productName": "摸鱼工具",
+    "files": [
+      "main/**",
+      "preload/**",
+      "renderer/**",
+      "assets/**",
+      "package.json"
+    ],
+    "win": {
+      "icon": "assets/icon.ico",
+      "target": [
+        "portable"
+      ]
+    },
+    "portable": {
+      "artifactName": "摸鱼工具-${version}.exe"
+    }
   }
 }
