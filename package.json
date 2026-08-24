@@ -33,7 +33,7 @@
       ]
     },
     "portable": {
-      "artifactName": "摸鱼工具-${version}.exe"
+      "artifactName": "moyu-tool-${version}.exe"
     }
   }
 }
