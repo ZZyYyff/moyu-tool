@@ -1,0 +1,40 @@
+# 摸鱼工具
+
+> 桌面右下角一个伪装成广告弹窗的 Electron 应用。谁看都是一坨没人理会的广告。
+
+## 功能
+
+- **伪装广告弹窗**：右下角常驻、始终置顶；4 套广告样式可切换（新闻资讯流/游戏广告/恭喜中奖/系统通知），文案在 `renderer/ad/ad-themes.json`，改文案不用碰代码；假关闭按钮只收进托盘，绝不关闭
+- **拖入即用**：
+  - 拖入网址（浏览器地址栏锁形图标 / 网页链接）→ 内置多标签浏览器打开
+  - 拖入 .txt / .epub 小说 → 阅读器（GBK/UTF-8 自动识别、章节目录、字号/字体/暗色/字体颜色、按书记忆进度续读）
+- **多标签浏览器**：每标签独立登录态、切走自动静音、新窗口一律转新标签、页面自动缩放适配窗口
+- **老板键**：`Ctrl+Shift+Z` 一键隐藏到托盘；`Ctrl+Shift+X` 伪装 ↔ 内容切换（热键全部可自定义）
+- **悬停揭示**：鼠标悬停窗口显示内容、移开立即切回伪装（设置可关）
+- **透明背景模式**：`Ctrl+Shift+T`——只显示小说文本，背景全透，浮在工作窗口上方；任意位置拖动窗口；`Ctrl+Shift+PageUp/PageDown` 翻页
+- **会话恢复**：重启后恢复标签列表、小说阅读位置、窗口尺寸
+
+## 使用
+
+```bash
+npm install     # 安装依赖
+npm start       # 开发运行
+npm test        # 单元测试
+npm run dist    # 打包便携版 exe（dist/摸鱼工具-<版本>.exe，免安装）
+```
+
+默认热键：`Ctrl+Shift+Z` 隐藏/恢复 · `Ctrl+Shift+X` 伪装/内容 · `Ctrl+Shift+T` 透明模式 · `Ctrl+Shift+PageUp/PageDown` 翻页
+
+## 技术栈
+
+Electron 43 · 原生 JS（无框架）· WebContentsView 多标签 · node:test 单元测试
+
+## 文档
+
+- 设计规格：`docs/superpowers/specs/2026-08-21-moyu-tool-design.md`（含全部设计裁定 A-AB）
+- 实施计划：`docs/superpowers/plans/2026-08-21-moyu-tool.md`
+- 开发指引：`CLAUDE.md`
+
+## 许可
+
+MIT
