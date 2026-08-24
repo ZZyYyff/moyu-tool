@@ -238,6 +238,28 @@ function buildReaderDom() {
     if (e.target.closest('#reader-settings') || e.target.closest('[data-action="settings"]')) return;
     closeReaderSettings();
   });
+
+  // 用户反馈：透明模式任意位置拖动窗口。不用 -webkit-app-region: drag（会吞掉
+  // 滚轮事件，透明模式还要滚轮翻页）——渲染层 pointer 驱动 + pointer capture
+  // （拖出窗口也能收到 pointerup），主进程轮询 getCursorScreenPoint 移动窗口。
+  let windowDragging = false;
+  view.addEventListener('pointerdown', (e) => {
+    if (readerView().dataset.transparent !== 'true') return; // 仅透明模式
+    if (e.target.closest('#reader-settings')) return; // 面板按钮仍可点
+    windowDragging = true;
+    view.setPointerCapture(e.pointerId);
+    window.api.send('window:drag-start', {
+      offsetX: e.screenX - window.screenX,
+      offsetY: e.screenY - window.screenY,
+    });
+  });
+  const endWindowDrag = () => {
+    if (!windowDragging) return;
+    windowDragging = false;
+    window.api.send('window:drag-end');
+  };
+  view.addEventListener('pointerup', endWindowDrag);
+  view.addEventListener('pointercancel', endWindowDrag);
 }
 
 // 浏览器环境才构建 DOM；Node 测试环境只导出纯函数

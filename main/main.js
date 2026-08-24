@@ -103,6 +103,22 @@ app.whenReady().then(() => {
   // 假关闭按钮 → 真正收进托盘（Task 5 遗留的 handler）
   ipcMain.on('window:hide', () => win.hide());
 
+  // 透明模式任意位置拖动窗口（用户反馈）：渲染层 pointerdown 传光标偏移，主进程
+  // 轮询 getCursorScreenPoint 移动窗口（offset 保持光标与窗口左上角相对位置不变）。
+  // 不用 -webkit-app-region: drag —— 拖拽区吞滚轮事件，透明模式需要滚轮翻页。
+  let dragTimer = null;
+  const stopWindowDrag = () => { if (dragTimer) { clearInterval(dragTimer); dragTimer = null; } };
+  ipcMain.on('window:drag-start', (_e, { offsetX, offsetY }) => {
+    stopWindowDrag();
+    dragTimer = setInterval(() => {
+      if (win.isDestroyed()) { stopWindowDrag(); return; }
+      const c = screen.getCursorScreenPoint();
+      win.setPosition(Math.round(c.x - offsetX), Math.round(c.y - offsetY));
+    }, 16);
+  });
+  ipcMain.on('window:drag-end', stopWindowDrag);
+  win.on('blur', stopWindowDrag); // 安全兜底：拖动中窗口失焦（Alt+Tab 等）立即停止
+
   // 规格 §7：隐藏/关闭时强制写盘 —— 主进程驱动（实测 Electron 43 + Windows 上 hide()
   // 不触发渲染进程 visibilitychange，故由主进程监听 hide/close 推送 flush，渲染器收到后 saveNow）
   const flushProgress = () => {
