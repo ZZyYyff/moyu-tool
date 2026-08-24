@@ -31,9 +31,7 @@ Electron 43 · 原生 JS（无框架）· WebContentsView 多标签 · node:test
 
 ## 文档
 
-- 设计规格：`docs/superpowers/specs/2026-08-21-moyu-tool-design.md`（含全部设计裁定 A-AB）
-- 实施计划：`docs/superpowers/plans/2026-08-21-moyu-tool.md`
-- 开发指引：`CLAUDE.md`
+- 开发指引：`CLAUDE.md`（设计规格/实施计划为本地文档，不入库）
 
 ## 许可
 
