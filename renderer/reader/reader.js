@@ -102,6 +102,9 @@ function openReaderSettings() {
   $('#rs-size').value = prefs.fontSize || 16;
   $('#rs-size-v').textContent = prefs.fontSize || 16;
   $('#rs-dark').checked = !!prefs.dark;
+  $('#rs-transparent').checked = !!prefs.transparent; // 裁定 AB
+  // 颜色：有自定义值显示之；空（跟随模式）显示当前模式默认色
+  $('#rs-color').value = prefs.color || (prefs.dark ? '#b8b8b8' : '#333333');
   const font = prefs.fontFamily || 'yahei';
   const radio = document.querySelector(`#reader-settings input[name="rs-font"][value="${font}"]`);
   if (radio) radio.checked = true;
@@ -113,16 +116,26 @@ function closeReaderSettings() {
 }
 
 // 应用阅读偏好到 DOM（T13 设置面板复用，务必保持导出）：
-// fontSize → CSS 变量 --fs；fontFamily/dark → reader-view 的 data 属性。
-// prefs 可显式传入（T13 设置面板保存时传入本地值立即生效）；缺省读 window.__settings.reader
-// （openNovel / 工具栏改动路径；偏好经 settings:changed 广播同步到 __settings，
-//   故设置面板保存后下次 openNovel 也会读到新偏好）
+// fontSize → CSS 变量 --fs；fontFamily/dark/transparent → reader-view 的 data 属性；
+// color → CSS 变量 --fc（空值回退 CSS 默认：浅色 #333 / 暗色 #b8b8b8）。
+// prefs 可显式传入；缺省读 window.__settings.reader
 function applyReaderPrefs(prefs) {
   prefs = prefs || (window.__settings && window.__settings.reader);
   if (!prefs) return;
   readerView().dataset.font = prefs.fontFamily;
   readerView().dataset.dark = String(prefs.dark);
+  readerView().dataset.transparent = String(!!prefs.transparent); // 裁定 AB
   readerView().style.setProperty('--fs', (prefs.fontSize || 16) + 'px');
+  readerView().style.setProperty('--fc', prefs.color || ''); // 空 → CSS var 回退
+}
+
+// 裁定 AB：热键翻页 —— 滚动一屏（阅读器可见时生效）
+function pageReader(delta) {
+  if (!state) return;
+  const el = $('#reader-content');
+  if (!el || el.hidden) return;
+  el.scrollTop += delta * el.clientHeight;
+  scheduleSave();
 }
 
 // —— 目录浮层 ——
@@ -178,6 +191,8 @@ function buildReaderDom() {
           <label><input type="radio" name="rs-font" value="kai">楷体</label>
         </span>
       </div>
+      <div class="rs-row"><label>颜色</label><input id="rs-color" type="color" title="字体颜色"><button data-action="rs-color-reset" title="恢复默认（跟随浅色/暗色模式）">默认</button></div>
+      <div class="rs-row"><label>透明背景</label><input id="rs-transparent" type="checkbox" title="只显示小说文本（Ctrl+Shift+T 切换）"></div>
       <button data-action="rs-close">关闭</button>
     </div>`;
   // 进度保存：scroll 不冒泡，直接监听内容区（brief 的 readerView 委托写法在无 capture 时收不到事件）
@@ -192,6 +207,11 @@ function buildReaderDom() {
     else if (action === 'toc-goto') gotoChapter(Number(btn.dataset.i));
     else if (action === 'settings') { closeToc(); openReaderSettings(); }
     else if (action === 'rs-close') closeReaderSettings();
+    else if (action === 'rs-color-reset') {
+      setReaderPrefs({ color: null }); // 恢复跟随模式（浅色黑字/暗色浅灰）
+      const prefs = (window.__settings && window.__settings.reader) || {};
+      $('#rs-color').value = prefs.dark ? '#b8b8b8' : '#333333';
+    }
     else if (action === 'back') setMode('ad');
   });
   // 设置面板控件：即点即改（滑杆 input 实时、暗色/字体 change 时写盘）
@@ -204,6 +224,10 @@ function buildReaderDom() {
   document.querySelectorAll('#reader-settings input[name="rs-font"]').forEach((r) => {
     r.addEventListener('change', () => setReaderPrefs({ fontFamily: r.value }));
   });
+  // 裁定 AB：字体颜色（input 实时取色）+ 透明背景（切到透明后工具栏隐藏，
+  // 面板保持可见可切回；也可 Ctrl+Shift+T 全局切换）
+  $('#rs-color').addEventListener('input', (e) => setReaderPrefs({ color: e.target.value }));
+  $('#rs-transparent').addEventListener('change', (e) => setReaderPrefs({ transparent: e.target.checked }));
   // 点面板外（非面板、非"设置"按钮）关闭
   document.addEventListener('click', (e) => {
     const panel = $('#reader-settings');
@@ -219,5 +243,5 @@ if (typeof document !== 'undefined' && typeof window !== 'undefined') {
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { computeProgress, restoreScroll, openNovel, loadChapter, saveNow, applyReaderPrefs, openToc, closeToc };
+  module.exports = { computeProgress, restoreScroll, openNovel, loadChapter, saveNow, applyReaderPrefs, openToc, closeToc, pageReader };
 }

@@ -71,10 +71,17 @@ window.api.invoke('shell:ready').then(({ settings, mode, tabs }) => {
   else window.addEventListener('load', applyInitialState, { once: true });
 });
 
-// 托盘"伪装样式"切换（Task 6）：settings 已持久化，这里重渲染广告视图
+// 托盘"伪装样式"切换（Task 6）/ 热键改偏好（裁定 AB）：settings 已持久化，
+// 重渲染广告视图 + 应用阅读偏好（颜色/透明/字号等即时生效，幂等）
 window.api.on('settings:changed', (settings) => {
   window.__settings = settings;
   renderAd(settings.adStyle);
+  if (typeof applyReaderPrefs === 'function') applyReaderPrefs(settings.reader);
+});
+
+// 裁定 AB：全局热键翻页（Ctrl+Shift+PageUp/PageDown）→ 阅读器翻一屏
+window.api.on('reader:page', (delta) => {
+  if (typeof pageReader === 'function') pageReader(delta);
 });
 
 // 托盘"设置"入口 → 设置面板（Task 13：settings.js 实现；广告菜单同调 openSettings，

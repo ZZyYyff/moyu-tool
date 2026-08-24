@@ -16,6 +16,9 @@ async function buildSettingsForm() {
     <h3>设置</h3>
     <div class="row"><label>隐藏/恢复热键</label><input id="hk-window" value="${s.hotkeys.toggleWindow}"></div>
     <div class="row"><label>切换模式热键</label><input id="hk-mode" value="${s.hotkeys.toggleMode}"></div>
+    <div class="row"><label>透明模式热键</label><input id="hk-transparent" value="${s.hotkeys.toggleTransparent}"></div>
+    <div class="row"><label>上一页热键</label><input id="hk-pageup" value="${s.hotkeys.pageUp}"></div>
+    <div class="row"><label>下一页热键</label><input id="hk-pagedown" value="${s.hotkeys.pageDown}"></div>
     <div class="row"><label>默认伪装样式</label><select id="ad-style">
       ${['news','game','prize','sys'].map(k => `<option value="${k}" ${s.adStyle === k ? 'selected' : ''}>${k}</option>`).join('')}
     </select></div>
@@ -40,6 +43,9 @@ async function buildSettingsForm() {
   };
   capture('hk-window', 'toggleWindow');
   capture('hk-mode', 'toggleMode');
+  capture('hk-transparent', 'toggleTransparent'); // 裁定 AB
+  capture('hk-pageup', 'pageUp');
+  capture('hk-pagedown', 'pageDown');
 
   document.getElementById('set-save').onclick = async () => {
     const s2 = await window.api.invoke('settings:get');

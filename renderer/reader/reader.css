@@ -45,7 +45,8 @@
   flex: 1;
 }
 
-/* 正文区：字号走 CSS 变量 --fs（默认 16px），由 applyReaderPrefs 写入 */
+/* 正文区：字号走 CSS 变量 --fs（默认 16px）；颜色走 --fc（裁定 AB：自定义色，
+   空值回退 —— 浅色 #333 / 暗色 #b8b8b8），均由 applyReaderPrefs 写入 */
 #reader-content {
   flex: 1;
   min-height: 0;
@@ -53,7 +54,7 @@
   padding: 0 18px 40px;
   font-size: var(--fs, 16px);
   line-height: 1.9;
-  color: #333;
+  color: var(--fc, #333);
 }
 
 #reader-content h2 {
@@ -80,7 +81,22 @@
 
 #reader-view[data-dark="true"] #reader-content {
   background: #1e1e1e;
-  color: #b8b8b8;
+  color: var(--fc, #b8b8b8);
+}
+
+/* 裁定 AB：透明背景模式 —— 只显示小说文本（背景全透、隐藏工具栏与目录浮层）。
+   置于暗色规则之后（同特异性后者胜），保证暗色+透明时背景仍透明 */
+#reader-view[data-transparent="true"] {
+  background: transparent !important;
+}
+
+#reader-view[data-transparent="true"] #reader-toolbar,
+#reader-view[data-transparent="true"] #reader-toc {
+  display: none;
+}
+
+#reader-view[data-transparent="true"] #reader-content {
+  background: transparent !important;
 }
 
 /* 字体：data-font 属性驱动（yahei/song/kai 三档循环） */

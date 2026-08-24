@@ -27,17 +27,19 @@ function normalizeAccelerator(raw) {
 
 let registered = {};
 
+// 全部可配置热键槽（裁定 AB 扩展：透明模式切换 + 阅读翻页）
+const HOTKEY_KINDS = ['toggleWindow', 'toggleMode', 'toggleTransparent', 'pageUp', 'pageDown'];
+
 // 回调表（Ruling B）：setCallbacks 注入一次，registerHotkeys / applyHotkeyChange
 // 均从表中取回调，保证改键后重新注册的热键仍有动作。
-let callbacks = { toggleWindow: null, toggleMode: null };
+let callbacks = {};
 
-function setCallbacks({ toggleWindow, toggleMode } = {}) {
-  if (typeof toggleWindow === 'function') callbacks.toggleWindow = toggleWindow;
-  if (typeof toggleMode === 'function') callbacks.toggleMode = toggleMode;
+function setCallbacks(cbs = {}) {
+  for (const k of HOTKEY_KINDS) if (typeof cbs[k] === 'function') callbacks[k] = cbs[k];
 }
 
 function registerHotkeys({ getWindow, toggleMode, notifyConflict, userDataDir }) {
-  // 兜底：未调 setCallbacks 时用传参补齐回调表（正常装配路径走 setCallbacks）
+  // 兜底：未调 setCallbacks 时用传参补齐核心回调（正常装配路径走 setCallbacks）
   if (!callbacks.toggleWindow && typeof getWindow === 'function') {
     callbacks.toggleWindow = () => {
       const w = getWindow();
@@ -49,19 +51,16 @@ function registerHotkeys({ getWindow, toggleMode, notifyConflict, userDataDir })
   }
 
   const settings = store.loadSettings(userDataDir);
-  const acc1 = normalizeAccelerator(settings.hotkeys.toggleWindow);
-  const acc2 = normalizeAccelerator(settings.hotkeys.toggleMode);
   const failed = [];
-  if (acc1 && globalShortcut.register(acc1, () => callbacks.toggleWindow && callbacks.toggleWindow())) {
-    registered.toggleWindow = acc1;
-  } else if (acc1) {
-    failed.push(acc1);
-  }
-
-  if (acc2 && globalShortcut.register(acc2, () => callbacks.toggleMode && callbacks.toggleMode())) {
-    registered.toggleMode = acc2;
-  } else if (acc2) {
-    failed.push(acc2);
+  for (const kind of HOTKEY_KINDS) {
+    const acc = normalizeAccelerator(settings.hotkeys[kind]);
+    if (!acc) continue; // 未配置（null/空）→ 跳过
+    const handler = () => { const cb = callbacks[kind]; if (cb) cb(); };
+    if (globalShortcut.register(acc, handler)) {
+      registered[kind] = acc;
+    } else {
+      failed.push(acc);
+    }
   }
 
   failed.forEach(f => notifyConflict && notifyConflict(f));
@@ -76,17 +75,14 @@ function unregisterHotkeys() {
 function applyHotkeyChange(kind, rawAcc, userDataDir) {
   const acc = normalizeAccelerator(rawAcc);
   if (!acc) return { ok: false, reason: '无效的快捷键' };
-  if (kind !== 'toggleWindow' && kind !== 'toggleMode') {
+  if (!HOTKEY_KINDS.includes(kind)) {
     return { ok: false, reason: '无效的快捷键类型' };
   }
   const s = store.loadSettings(userDataDir);
   const oldAcc = normalizeAccelerator(s.hotkeys[kind]);
   if (oldAcc === acc) return { ok: true }; // 值未变，无需重注册
 
-  const handler = () => {
-    const cb = kind === 'toggleWindow' ? callbacks.toggleWindow : callbacks.toggleMode;
-    if (cb) cb();
-  };
+  const handler = () => { const cb = callbacks[kind]; if (cb) cb(); };
   if (!globalShortcut.register(acc, handler)) {
     return { ok: false, reason: '快捷键被其他程序占用' };
   }

@@ -7,8 +7,14 @@ function defaultSettings() {
     adBounds: null, // Ruling Z：伪装模式窗口尺寸记忆（默认 340×280）
     contentBounds: null, // Ruling Z：内容模式窗口尺寸记忆（默认 1150×750）
     adStyle: 'news',
-    hotkeys: { toggleWindow: 'Ctrl+Shift+Z', toggleMode: 'Ctrl+Shift+X' },
-    reader: { fontSize: 16, fontFamily: 'yahei', dark: false },
+    hotkeys: {
+      toggleWindow: 'Ctrl+Shift+Z',
+      toggleMode: 'Ctrl+Shift+X',
+      toggleTransparent: 'Ctrl+Shift+T', // 透明背景模式（裁定 AB，2026-08-21）
+      pageUp: 'Ctrl+Shift+PageUp', // 阅读翻页（裁定 AB）
+      pageDown: 'Ctrl+Shift+PageDown',
+    },
+    reader: { fontSize: 16, fontFamily: 'yahei', dark: false, color: null, transparent: false },
     lastTabs: [],
     lastNovels: {}, // Task 12：novelId → Novel 元数据（会话恢复时重建 novelsMeta）
     hoverReveal: true, // 悬停揭示（brainstorming 2026-08-21）：鼠标悬停显示内容、移开立即伪装
