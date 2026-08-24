@@ -21,7 +21,7 @@ body {
   font-family: "Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
   font-size: 14px;
   color: #333;
-  background: #f5f6f8;
+  background: transparent; /* 裁定 AB 修正：窗口恒为分层透明窗口，不透明度全由子元素 CSS 控制 */
   user-select: none;
 }
 
@@ -32,13 +32,14 @@ body {
   background: #fff;
 }
 
-/* 内容视图：全屏，纵向 flex 布局 */
+/* 内容视图：全屏，纵向 flex 布局。
+   裁定 AB 修正：自身不设背景（透明阅读器需透穿）；不透明度由子元素承担：
+   阅读器 #reader-view 默认纸白、暗色深灰、透明模式透明；标签栏/地址栏各自有底 */
 #content-view {
   position: absolute;
   inset: 0;
   display: flex;
   flex-direction: column;
-  background: #fff;
 }
 
 /* 标签栏：顶部固定（高度与主进程 TABBAR_H=34 对齐，保证 WebContentsView 起始 y 与 DOM 一致）。
@@ -188,11 +189,13 @@ body {
   font-size: 13px;
 }
 
-/* 视图槽：主进程把 WebContentsView 叠在这里，占满剩余空间 */
+/* 视图槽：主进程把 WebContentsView 叠在这里，占满剩余空间。
+   裁定 AB 修正：给底色（网页标签被原生视图覆盖、空状态/错误页可见时兜底） */
 #view-slot {
   position: relative;
   flex: 1 1 auto;
   min-height: 0;
+  background: #f5f6f8;
 }
 
 /* 阅读器视图（Task 9 填充） */

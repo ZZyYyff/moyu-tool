@@ -38,10 +38,12 @@ function createMainWindow(userDataDir, { getMode }) {
     resizable: true,
     minWidth: 300,
     minHeight: 240,
-    // 裁定 AB（透明背景模式）：Windows 分层窗口——只有创建时 transparent: true，
-    // 运行时 setBackgroundColor(alpha 0) 才能透出桌面；探针实测无边框/置顶/缩放/WebView 均正常
+    // 裁定 AB（透明背景模式）：窗口恒为 Windows 分层透明窗口（创建时 transparent: true），
+    // 背景固定全透明 —— 不透明度完全由渲染层 CSS 控制（阅读器纸白/暗色/透明、广告主题、
+    // 网页自带背景）；探针实测无边框/置顶/缩放/WebView 均正常。
+    // 不用运行时 setBackgroundColor 切透明：Windows 分层窗口上运行时切换不可靠（用户实测仍有窗口）。
     transparent: true,
-    backgroundColor: '#f7f5ef',
+    backgroundColor: '#00000000',
     webPreferences: {
       preload: require('path').join(__dirname, '..', 'preload', 'preload.js'),
       sandbox: true,

@@ -34,7 +34,7 @@ app.whenReady().then(() => {
     win,
     userDataDir,
     notify: (msg) => {
-      if (msg.type === 'tabs:changed') { win.webContents.send('tabs:changed', msg); persistTabs(); applyWindowBackground(); }
+      if (msg.type === 'tabs:changed') { win.webContents.send('tabs:changed', msg); persistTabs(); }
       if (msg.type === 'tab:error') win.webContents.send('tab:error', msg);
     },
   });
@@ -44,7 +44,7 @@ app.whenReady().then(() => {
     mode = m;
     tabsApi.setMode(m);
     windowApi.applyBoundsForMode(m, userDataDir);
-    applyWindowBackground(); // 裁定 AB：模式变化可能进出透明激活态
+    // 裁定 AB 修正：窗口恒透明，不透明度由渲染层 CSS 控制（reader data-transparent），主进程不再管背景
   };
 
   // 悬停揭示（brainstorming 2026-08-21）：鼠标悬停窗口显示内容、移开立即切回伪装。
@@ -75,16 +75,6 @@ app.whenReady().then(() => {
     }
   }, 200);
 
-  // 裁定 AB：窗口背景按"透明模式是否激活"切换 —— 激活条件 = reader.transparent 开
-  // 且内容模式且当前激活的是小说标签（网页标签/伪装模式恢复不透明底，网页有自己的背景）。
-  const applyWindowBackground = () => {
-    if (win.isDestroyed()) return;
-    const s = store.loadSettings(userDataDir);
-    const t = tabsApi.getActiveTabId();
-    const tab = t ? tabsApi.getTab(t) : null;
-    const transparentActive = !!(s.reader && s.reader.transparent) && mode === 'content' && tab && tab.type === 'novel';
-    win.setBackgroundColor(transparentActive ? '#00000000' : '#f7f5ef');
-  };
   ipc.register({
     userDataDir,
     shellWin,
@@ -151,8 +141,7 @@ app.whenReady().then(() => {
       const s = store.loadSettings(userDataDir);
       s.reader = { ...(s.reader || {}), transparent: !(s.reader && s.reader.transparent) };
       store.saveSettings(s, userDataDir);
-      applyWindowBackground();
-      win.webContents.send('settings:changed', s); // 壳层渲染阅读器 data-transparent
+      win.webContents.send('settings:changed', s); // 壳层 applyReaderPrefs → data-transparent → CSS 透明
     },
     pageUp: () => win.webContents.send('reader:page', -1),
     pageDown: () => win.webContents.send('reader:page', 1),
