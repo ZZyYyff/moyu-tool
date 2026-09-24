@@ -1,16 +1,35 @@
-/* renderer/reader/reader.css — 小说阅读器（Task 9）
-   在 index.html 中位于 shell.css 之后加载，同特异性下覆盖壳层 #reader-view 规则 */
+/* renderer/reader/reader.css — 小说阅读器 v2（参照 Reader 重设计）
+   在 index.html 中位于 shell.css 之后加载，同特异性下覆盖壳层 #reader-view 规则
+   主题经 data-theme 切换（paper/sepia/green/dark），排版参数走 CSS 变量（applyReaderPrefs 写入） */
 
 #reader-view {
+  /* 排版变量默认值（applyReaderPrefs 会覆写） */
+  --fs: 16px;      /* 字号 */
+  --lh: 1.9;       /* 行距 */
+  --pgap: 0.6em;   /* 段距 */
+  --cgap: 0px;     /* 字距 */
+  --margin: 32px;  /* 页边距 */
+  --bg: #f7f5ef;   /* 主题：纸面 */
+  --fg: #333333;
+  --chrome: #ece8df; /* 工具栏/状态栏底色 */
+  --border: #d8d4c8;
+
   position: absolute;
   inset: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: #f7f5ef;
+  background: var(--bg);
+  color: var(--fc, var(--fg));
 }
 
-/* 工具栏：目录 / 字号 / 暗色 / 字体 / 返回伪装 */
+/* 主题四预设（Reader 式：底色+字色成对） */
+#reader-view[data-theme="paper"] { --bg: #f7f5ef; --fg: #333333; --chrome: #ece8df; --border: #d8d4c8; }
+#reader-view[data-theme="sepia"] { --bg: #f4ecd8; --fg: #5b4636; --chrome: #e8dcc0; --border: #d4c5a3; }
+#reader-view[data-theme="green"] { --bg: #c7edcc; --fg: #2d4a35; --chrome: #b2dfba; --border: #9ccfa6; }
+#reader-view[data-theme="dark"]  { --bg: #1e1e1e; --fg: #b8b8b8; --chrome: #2a2a2a; --border: #3a3a3a; }
+
+/* 工具栏：目录/书签/搜索/自动翻页/设置/返回伪装 */
 #reader-toolbar {
   flex: 0 0 auto;
   height: 30px;
@@ -18,49 +37,49 @@
   align-items: center;
   gap: 6px;
   padding: 0 8px;
-  background: #ece8df;
-  border-bottom: 1px solid #d8d4c8;
+  background: var(--chrome);
+  border-bottom: 1px solid var(--border);
   font-size: 12px;
 }
 
 #reader-toolbar button {
-  border: 1px solid #cfc9bb;
-  background: #f7f5ef;
+  border: 1px solid var(--border);
+  background: var(--bg);
   border-radius: 4px;
   padding: 2px 8px;
   font-size: 12px;
   cursor: pointer;
-  color: #444;
-  /* 用户反馈修复：阅读器工具栏位于 #tabbar 拖拽区矩形（34px 顶带）内，Electron
-     拖拽区吞掉矩形内所有鼠标事件 —— 按钮必须 no-drag 挖孔（与确认条同款修复）；
-     工具栏中间空白区（.reader-spacer）保留拖拽窗口能力 */
+  color: var(--fc, var(--fg));
+  /* 用户反馈修复：工具栏位于 #tabbar 拖拽区矩形（34px 顶带）内，Electron 拖拽区
+     吞掉矩形内所有鼠标事件 —— 按钮必须 no-drag 挖孔；中间空白（.reader-spacer）保留拖拽 */
   -webkit-app-region: no-drag;
 }
 
 #reader-toolbar button:hover {
-  background: #fff;
+  filter: brightness(1.05);
 }
 
 .reader-spacer {
   flex: 1;
 }
 
-/* 正文区：字号走 CSS 变量 --fs（默认 16px）；颜色走 --fc（裁定 AB：自定义色，
-   空值回退 —— 浅色 #333 / 暗色 #b8b8b8），均由 applyReaderPrefs 写入。
-   用户反馈：隐藏滚动条（滚动功能保留 —— 滚轮/热键/触屏不受影响） */
+/* 正文区：排版全部走变量；position:relative 使段落 offsetTop 以内容区为基准
+  （进度采集/恢复的二分定位依赖它）；隐藏滚动条（滚动功能保留） */
 #reader-content {
+  position: relative;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  scrollbar-width: none; /* Firefox */
-  padding: 0 18px 40px;
-  font-size: var(--fs, 16px);
-  line-height: 1.9;
-  color: var(--fc, #333);
+  scrollbar-width: none;
+  padding: 12px var(--margin) 40px;
+  font-size: var(--fs);
+  line-height: var(--lh);
+  letter-spacing: var(--cgap);
+  color: var(--fc, var(--fg));
 }
 
 #reader-content::-webkit-scrollbar {
-  display: none; /* Chromium/Electron */
+  display: none;
 }
 
 #reader-content h2 {
@@ -69,41 +88,65 @@
   margin: 14px 0;
 }
 
-/* 段落（用户反馈修复）：每段一个 <p>，首行缩进两字符（中文排版惯例） */
+/* 段落：首行缩进两字可开关（data-indent）；段距走变量 */
 #reader-content p {
-  margin: 0 0 0.6em 0;
+  margin: 0 0 var(--pgap) 0;
   text-indent: 2em;
 }
 
-/* 暗色：reader-view data-dark 属性驱动 */
-#reader-view[data-dark="true"] {
-  background: #1e1e1e;
+#reader-view[data-indent="false"] #reader-content p {
+  text-indent: 0;
 }
 
-#reader-view[data-dark="true"] #reader-toolbar {
-  background: #2a2a2a;
-  border-bottom-color: #3a3a3a;
+/* 状态栏：章名 · 百分比 · 章序（透明模式隐藏） */
+#reader-status {
+  flex: 0 0 auto;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 10px;
+  background: var(--chrome);
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--fc, var(--fg));
+  white-space: nowrap;
+  overflow: hidden;
 }
 
-#reader-view[data-dark="true"] #reader-content {
-  background: #1e1e1e;
-  color: var(--fc, #b8b8b8);
+#reader-status .rs-chapter-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* 裁定 AB：透明背景模式 —— 只显示小说文本（背景全透、隐藏工具栏与目录浮层）。
-   置于暗色规则之后（同特异性后者胜），保证暗色+透明时背景仍透明 */
+#rs-chapter {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 1;
+}
+
+.rs-gap {
+  flex: 1;
+}
+
+#rs-percent, #rs-pos {
+  flex-shrink: 0;
+}
+
+/* 裁定 AB：透明背景模式 —— 只显示小说文本（背景全透、隐藏一切阅读器界面）。
+   置于主题规则之后，保证任何主题+透明时背景仍透明 */
 #reader-view[data-transparent="true"] {
   background: transparent !important;
 }
 
 #reader-view[data-transparent="true"] #reader-toolbar,
-#reader-view[data-transparent="true"] #reader-toc {
+#reader-view[data-transparent="true"] #reader-toc,
+#reader-view[data-transparent="true"] #reader-status {
   display: none;
 }
 
-/* 用户反馈：透明模式下阅读器背景全透，被盖住的顶带（标签栏/地址栏）会透出来 ——
-   透明激活态（content-view 上的 data-transparent，由 applyReaderPrefs 按阅读器可见性维护）
-   时一并隐藏；网页标签模式阅读器隐藏 → 属性为 false → 标签栏恢复 */
+/* 透明激活态上移到 content-view：被盖住的顶带（标签栏/地址栏）一并隐藏；
+   网页标签模式阅读器隐藏 → 属性为 false → 标签栏恢复 */
 #content-view[data-transparent="true"] #tabbar,
 #content-view[data-transparent="true"] #addressbar {
   display: none;
@@ -113,20 +156,19 @@
   background: transparent !important;
 }
 
-/* 字体：data-font 属性驱动（yahei/song/kai 三档循环） */
+/* 字体：data-font 属性驱动（yahei/song/kai） */
 #reader-view[data-font="song"] #reader-content { font-family: "SimSun", serif; }
 #reader-view[data-font="kai"]  #reader-content { font-family: "KaiTi", serif; }
 #reader-view[data-font="yahei"] #reader-content { font-family: "Microsoft YaHei", sans-serif; }
 
-/* 目录浮层：盖住整个阅读器（含工具栏），自带返回按钮。
-   同样位于顶带拖拽区之上 → 整体 no-drag 挖孔，内部按钮才可点 */
+/* —— 浮层面板公共（目录全屏；书签/搜索/设置为右侧浮层）—— */
 #reader-toc {
   position: absolute;
   inset: 0;
   z-index: 5;
   display: flex;
   flex-direction: column;
-  background: #f7f5ef;
+  background: var(--bg);
   -webkit-app-region: no-drag;
 }
 
@@ -137,21 +179,21 @@
   gap: 8px;
   height: 32px;
   padding: 0 8px;
-  background: #ece8df;
-  border-bottom: 1px solid #d8d4c8;
+  background: var(--chrome);
+  border-bottom: 1px solid var(--border);
   font-size: 13px;
   font-weight: bold;
-  color: #333;
+  color: var(--fc, var(--fg));
 }
 
 #reader-toc-head button {
-  border: 1px solid #cfc9bb;
-  background: #f7f5ef;
+  border: 1px solid var(--border);
+  background: var(--bg);
   border-radius: 4px;
   padding: 2px 8px;
   font-size: 12px;
   cursor: pointer;
-  color: #444;
+  color: var(--fc, var(--fg));
 }
 
 #reader-toc-list {
@@ -170,11 +212,11 @@
   padding: 6px 14px;
   font-size: 13px;
   cursor: pointer;
-  color: #444;
+  color: var(--fc, var(--fg));
 }
 
 #reader-toc-list button:hover {
-  background: #ece8df;
+  background: var(--chrome);
 }
 
 #reader-toc-list button.current {
@@ -182,24 +224,228 @@
   font-weight: bold;
 }
 
-/* 阅读设置小面板（brainstorming 改版）：工具栏下方浮层，字号/暗色/字体即点即改 */
+/* 右侧浮层：书签 / 搜索 / 书城 / 书源管理 / 设置（互斥打开） */
+#reader-bookmarks,
+#reader-search,
+#reader-source,
+#reader-sources {
+  position: absolute;
+  top: 36px;
+  right: 8px;
+  z-index: 6;
+  width: 280px;
+  max-height: calc(100% - 72px);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .18);
+  font-size: 12px;
+  color: var(--fc, var(--fg));
+  -webkit-app-region: no-drag;
+}
+
+.panel-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+  font-weight: bold;
+}
+
+.panel-head button {
+  border: 1px solid var(--border);
+  background: var(--bg);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--fc, var(--fg));
+}
+
+.panel-head span {
+  flex: 1;
+}
+
+#reader-bm-list,
+#reader-search-results,
+#src-results,
+#srcs-list {
+  flex: 1;
+  min-height: 40px;
+  overflow-y: auto;
+  padding: 6px;
+}
+
+.bm-empty {
+  padding: 8px;
+  opacity: .7;
+}
+
+.bm-row {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.bm-row .bm-go {
+  flex: 1;
+  text-align: left;
+  border: 1px solid var(--border);
+  background: transparent;
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--fc, var(--fg));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bm-row .bm-go:hover {
+  background: var(--chrome);
+}
+
+.bm-row button:not(.bm-go) {
+  border: 1px solid var(--border);
+  background: transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--fc, var(--fg));
+}
+
+.search-row {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 4px;
+  padding: 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.search-row input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 3px 6px;
+  font-size: 12px;
+  background: var(--bg);
+  color: var(--fc, var(--fg));
+}
+
+.search-row button {
+  border: 1px solid var(--border);
+  background: var(--chrome);
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--fc, var(--fg));
+}
+
+.search-hit {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: transparent;
+  padding: 5px 6px;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--fc, var(--fg));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search-hit:hover {
+  background: var(--chrome);
+}
+
+/* 书源管理：行（启用勾选 + 名称 + 删除）与 JSON 导入区 */
+.srcs-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 2px;
+}
+
+.srcs-row .srcs-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.srcs-row button {
+  border: 1px solid var(--border);
+  background: transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--fc, var(--fg));
+}
+
+.srcs-edit {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px;
+  border-top: 1px solid var(--border);
+}
+
+.srcs-edit textarea {
+  resize: vertical;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-size: 11px;
+  background: var(--bg);
+  color: var(--fc, var(--fg));
+}
+
+.srcs-edit button {
+  align-self: flex-end;
+  border: 1px solid var(--border);
+  background: var(--chrome);
+  border-radius: 4px;
+  padding: 3px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--fc, var(--fg));
+}
+
+/* 阅读设置面板（v2：排版/主题/翻页/章节识别四节） */
 #reader-settings {
   position: absolute;
   top: 36px;
   right: 8px;
   z-index: 6;
-  width: 230px;
+  width: 260px;
+  max-height: calc(100% - 72px);
+  overflow-y: auto;
   padding: 10px 12px;
-  background: #fff;
-  border: 1px solid #d8d4c8;
+  background: var(--bg);
+  border: 1px solid var(--border);
   border-radius: 6px;
   box-shadow: 0 4px 14px rgba(0, 0, 0, .18);
   font-size: 12px;
-  color: #333;
+  color: var(--fc, var(--fg));
   display: flex;
   flex-direction: column;
   gap: 8px;
   -webkit-app-region: no-drag;
+}
+
+.rs-title {
+  font-weight: bold;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 2px;
+  margin-top: 4px;
 }
 
 .rs-row {
@@ -209,17 +455,37 @@
 }
 
 .rs-row > label:first-child {
-  width: 32px;
+  width: 44px;
   flex-shrink: 0;
 }
 
-#rs-size {
+#reader-settings input[type="range"] {
   flex: 1;
+  min-width: 0;
 }
 
-#rs-size-v {
-  width: 24px;
+#reader-settings input[type="text"] {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 6px;
+  background: var(--bg);
+  color: var(--fc, var(--fg));
+}
+
+#reader-settings select {
+  flex: 1;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--fc, var(--fg));
+}
+
+#rs-size-v, #rs-linegap-v, #rs-paragap-v, #rs-margin-v, #rs-overlap-v, #rs-auto-v {
+  width: 30px;
   text-align: right;
+  flex-shrink: 0;
 }
 
 .rs-fonts {
@@ -227,47 +493,13 @@
   gap: 8px;
 }
 
-#reader-settings > button {
-  align-self: flex-end;
-  border: 1px solid #cfc9bb;
-  background: #f7f5ef;
+#reader-settings > button,
+#reader-settings .rs-row button {
+  border: 1px solid var(--border);
+  background: var(--chrome);
   border-radius: 4px;
   padding: 2px 10px;
   font-size: 12px;
   cursor: pointer;
-  color: #444;
-}
-
-#reader-view[data-dark="true"] #reader-settings {
-  background: #2a2a2a;
-  border-color: #3a3a3a;
-  color: #b8b8b8;
-}
-
-#reader-view[data-dark="true"] #reader-settings > button {
-  background: #333;
-  border-color: #444;
-  color: #b8b8b8;
-}
-
-#reader-view[data-dark="true"] #reader-toc {
-  background: #1e1e1e;
-}
-
-#reader-view[data-dark="true"] #reader-toc-head {
-  background: #2a2a2a;
-  border-bottom-color: #3a3a3a;
-  color: #b8b8b8;
-}
-
-#reader-view[data-dark="true"] #reader-toc-list button {
-  color: #b8b8b8;
-}
-
-#reader-view[data-dark="true"] #reader-toc-list button:hover {
-  background: #2a2a2a;
-}
-
-#reader-view[data-dark="true"] #reader-toc-list button.current {
-  color: #e0a080;
+  color: var(--fc, var(--fg));
 }

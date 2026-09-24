@@ -14,7 +14,22 @@ function defaultSettings() {
       pageUp: 'Ctrl+Shift+PageUp', // 阅读翻页（裁定 AB）
       pageDown: 'Ctrl+Shift+PageDown',
     },
-    reader: { fontSize: 16, fontFamily: 'yahei', dark: false, color: null, transparent: false },
+    // 阅读器偏好 v2（参照 Reader 重设计）：mode=翻页/滚动、theme=主题预设、
+    // lineGap/paraGap/charGap/margin=排版参数、indent=首行缩进、pageOverlap=翻页
+    // 保留行数、autoPageMs=自动翻页间隔、chapterRule=章节解析规则
+    reader: {
+      fontSize: 16, fontFamily: 'yahei', dark: false, color: null, transparent: false,
+      mode: 'page',
+      theme: 'paper', // paper 纸白 | sepia 羊皮 | green 护眼 | dark 暗色
+      lineGap: 1.9,
+      paraGap: 0.6,
+      charGap: 0,
+      margin: 32,
+      indent: true,
+      pageOverlap: 1,
+      autoPageMs: 3000,
+      chapterRule: { mode: 'auto', keyword: '', regex: '' },
+    },
     lastTabs: [],
     lastNovels: {}, // Task 12：novelId → Novel 元数据（会话恢复时重建 novelsMeta）
     hoverReveal: true, // 悬停揭示（brainstorming 2026-08-21）：鼠标悬停显示内容、移开立即伪装
@@ -67,5 +82,8 @@ function loadSettings(dir) {
 function saveSettings(settings, dir) { writeJson(dir, 'settings.json', settings); }
 function loadProgress(dir) { return readJson(dir, 'progress.json') || {}; }
 function saveProgress(map, dir) { writeJson(dir, 'progress.json', map); }
+// 书签（阅读器 v2）：novelId → [{chapterIndex, charOffset, label, percent, createdAt}]
+function loadBookmarks(dir) { return readJson(dir, 'bookmarks.json') || {}; }
+function saveBookmarks(map, dir) { writeJson(dir, 'bookmarks.json', map); }
 
-module.exports = { defaultSettings, loadSettings, saveSettings, loadProgress, saveProgress };
+module.exports = { defaultSettings, loadSettings, saveSettings, loadProgress, saveProgress, loadBookmarks, saveBookmarks };

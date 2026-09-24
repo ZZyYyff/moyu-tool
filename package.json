@@ -13,6 +13,7 @@
     "electron-builder": "^26.15.3"
   },
   "dependencies": {
+    "cheerio": "^1.2.0",
     "iconv-lite": "^0.7.3",
     "jszip": "^3.10.1"
   },

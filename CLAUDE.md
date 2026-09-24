@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目概述
 
-「摸鱼工具」——桌面右下角一个伪装成广告弹窗的 Electron 应用（Windows 10+）：拖入 URL 打开内置多标签浏览器（WebContentsView），拖入 .txt/.epub 进入带目录/进度记忆的小说阅读器，全局热键一键隐藏，鼠标悬停揭示内容、移开伪装（可开关）。**核心诉求：谁看都是一坨没人理会的广告。**
+「摸鱼工具」——桌面右下角一个伪装成广告弹窗的 Electron 应用（Windows 10+）：拖入 URL 打开内置多标签浏览器（WebContentsView），拖入 .txt/.epub/.mobi 进入带目录/进度记忆的小说阅读器（支持在线书源搜书），全局热键一键隐藏，鼠标悬停揭示内容、移开伪装（可开关）。**核心诉求：谁看都是一坨没人理会的广告。**
 
 权威文档（改动前先读）：规格 `docs/superpowers/specs/2026-08-21-moyu-tool-design.md`（含裁定记录 A-AA 与修订措辞），实施计划 `docs/superpowers/plans/2026-08-21-moyu-tool.md`。规格与代码冲突时以规格为准；所有已裁定决策（Ruling A-AA）在规格/计划中有出处，不要推翻未经确认。
 
@@ -24,7 +24,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 两种模式：`ad`（伪装广告小窗，默认 340×280）与 `content`（内容，默认 1150×750）。**唯一切换入口是 main.js 的 `applyMode(m)`**：更新 mode 状态 + `tabsApi.setMode`（ad→摘除全部视图 / content→挂载当前标签）+ `applyBoundsForMode`（窗口按模式记忆尺寸 setBounds）。所有入口（IPC mode:set、托盘、热键、悬停揭示、壳层双击/按钮）都汇到这里。主进程驱动的切换（托盘/热键/悬停）必须额外 `win.webContents.send('mode:set', m)` 让壳层同步 DOM；壳层发起的切换（shell.js setMode）则先自己改 DOM 再发 IPC。
 
-窗口尺寸按模式双槽记忆：`settings.adBounds` / `settings.contentBounds`（window.js `computeModeBounds`）；最大化期间不持久化。
+窗口尺寸按模式双槽记忆：`settings.adBounds` / `settings.contentBounds`（window.js `computeModeBounds`）；最大化期间不持久化。切模式**不恢复槽位旧位置**——以当前窗口右下角为锚只换尺寸，并收进所在显示器工作区（window.js `anchorBottomRight` + `clampToWorkArea`）：若按双槽各自恢复位置，两槽位置分叉（如内容模式拖动过窗口）会让悬停揭示在两个位置间无限振荡（光标悬在伪装窗上、内容窗却 setBounds 到另一处，200ms 轮询随即判定"移开"再切回）。
 
 ### 远程内容安全纪律（不可破坏）
 
@@ -45,14 +45,17 @@ main.js 里 200ms 轮询 `screen.getCursorScreenPoint()` 对窗口 bounds 判定
 
 tabs.js `fitToWindow`：仅当 zoom=1 时测量页面真实内容宽度并记忆到 `tab.fitNeed`，溢出则 `setZoomFactor(cw/sw)`（下限 0.25）；缩放期间凭记忆判断恢复（物理宽度 ≥ fitNeed×1.03 才回 1:1）。**禁止在缩放状态下测量**——页面会在更大 CSS 视口重新排版填满，测量值随 zoom 漂移导致振荡。加载/导航后重置 zoom=1 再测。
 
-### 阅读器
+### 阅读器（2026-09-24 重设计，参照 binbyu/Reader；裁定 R-24 系列见 `docs/superpowers/specs/2026-09-24-reader-redesign.md`）
 
-- 章节文本按 `/\n+/` 拆 `<p>` 渲染（textContent，无 XSS 面），`text-indent: 2em` 中文排版
-- 进度：滚动防抖 2s 写盘；`saveNow` 有 hidden 守卫（`#reader-view` 或 `#content-view` hidden 时跳过——display:none 下 scrollHeight=0 会算出 0 覆盖好进度）；切换标签/隐藏/关闭前必须 flush（switchActiveTab 顶部、showEmptyState、主进程 hide/close 推送 `app:flush-progress`）
-- 续读定位用**记录的 scrollRatio**（clamp 0~0.95），不是固定值；伪装模式下恢复需临时显形取真实布局（display:none 时 scrollHeight=0）
-- 工具栏只三个按钮：目录/设置/返回伪装；字号/暗色/字体在独立阅读设置面板（即点即改，`setReaderPrefs` 合并进 settings.reader）
-- 编码探测：UTF-8 严格解码失败自动回落 GBK（裁定 R，不做手动选择）
-- epub 走 `importEpub` 分支（readEpub → 文本块拼 UTF-8 存储文件，startLine 按块累加行号，分隔符每块 +1 行）
+- **进度 v2**：`{chapterIndex, charOffset}`（章内字符偏移，段落级精度，`<p data-ch data-off>`），改字号/换排版不丢位置；旧 scrollRatio 回落兼容（reader.js `restoreProgress`）。滚动防抖 2s 写盘；`saveNow` hidden 守卫保留；切换标签/隐藏/关闭前 flush 时机不变。伪装模式下定位需临时显形取真实布局（`restoreAt`，display:none 时 offsetTop/scrollHeight 全 0）
+- **翻页/滚动双模式**：page（默认）= 点击左右 1/3 翻页区 + 滚轮（60px 阈值累积）+ ←→/PgUp/PgDn + 空格自动翻页 + 保留行数（连续感），章尾自动进下一章/章首退上一章章尾；scroll = 章底自动追加下一章（单向连续，`maybeAppendNext`）
+- **渲染**：`<section data-ch>` + 段落 `<p>`（textContent 无 XSS 面），排版全走 CSS 变量（--fs/--lh/--pgap/--cgap/--margin）+ data 属性（theme/indent/mode），四主题预设+自定义字色；正文区 `position:relative`（段落 offsetTop 二分定位依赖它）
+- **章节解析 v2**（main/novels.js）：状态机（`第`+合法字符集含 廿卄卅+章回节卷部篇，另认 楔子/序章/引子/前言/后记/尾声），规则 auto/keyword/regex 存 `settings.reader.chapterRule`，阅读设置里可改完即 `novels:reparse` 重析（在线书除外）；导入先 `normalizeText` 再切章
+- **epub/mobi**：epub 走 spine 管线（每文件一章，h1/h2 标题，逐章 normalize 后拼 `\n\n`，startLine 增量推进）；mobi 走 `main/mobi.js`（PalmDoc 解压+尾部条目剥离+多字节重叠携带，HUFF/CDIC 与 DRM 明确报错）
+- **书签/搜索/百分比**：书签存 `userData/bookmarks.json`；全文搜索主进程读盘（`novels:search-text`，上限 200 条）；状态栏百分比点击可输数跳转（主进程按全书字符量精确定位 `percentTarget`）
+- **工具栏**：目录 | 书签 | 搜索 | 书城 | 自动翻页 | 设置 | 返回伪装 + 底部状态栏；透明模式全部隐藏（翻页靠滚轮/热键，拖动窗口优先于点击翻页区）；设置面板四节：排版/主题/翻页/章节识别
+- **编码探测**：UTF-8 严格解码失败自动回落 GBK（裁定 R，不做手动选择）
+- **在线书源**（main/booksource.js）：CSS 选择器 JSON 规则（存储 `userData/booksources.json`；Reader bs.json 是 xpath 不可直接导入）；搜索/目录/正文抓取，正文按需抓取后 `appendChapter` 追加进 `userData/novels/<id>.txt` 并记 startLine——目录/进度/搜索与本地书同构；读完预取下一章；目录刷新增量合并（站点缩水忽略）；`enabled` 判断用 `!== false`（兼容手写配置缺省字段）
 
 ### 广告伪装
 
@@ -74,5 +77,8 @@ tabs.js `fitToWindow`：仅当 zoom=1 时测量页面真实内容宽度并记忆
 - 壳层脚本全为经典 script 共享全局：**顶层 `const $` 只在 shell.js 声明一次**（reader.js 重复声明曾致整个脚本 SyntaxError 静默失效）；跨脚本函数（openNovel/saveNow/applyReaderPrefs/openSettings/renderAd）按加载顺序保证可用，`shell:ready` 初始化延迟到 window load（IPC 响应可能早于后续脚本求值）
 - 确认条在 34px 顶带，天然被拖拽区覆盖——新加的顶带覆盖物都要 no-drag
 - 标签 `failed` 标志（错误页机制）：chrome-error 提交会二次 did-finish-load（getURL 返原 URL），只有 did-navigate（实测 chrome-error 不触发）与 reload 前清除
+- **在线书追加契约**：`appendChapter` 约定章间分隔 `\n\n`、正文不含标题行（标题在 meta、渲染层自绘 h2）；startLine = 盘上行数 + 1，startLine 算术依赖该约定（epub/mobi 管线同构）
+- **mobi 尾部剥离在解压后的文本流上做**（非压缩域）：末字节是标记（低 2 位 = 多字节重叠字节数-1），重叠字节摘给下一记录；末记录只剥标记。尾部条目反向读 7bit 变长（KindleUnpack 算法）
+- **在线书预取无竞态**：novels:chapter 的 handler 在 kick off 预取后同步完成自身切片（JS 单线程），读文件时预取尚未动盘
 - 测试探针惯例：临时 `scripts/probe-*.js` 用 `npx electron scripts/probe-x.js` 跑真实 renderer/模块，验证后删除、不提交；真实 OS 交互（拖放、热键、托盘、悬停、拖拽区）必须人工确认
 - 提交历史按任务粒度；SDD 过程记录在 `.superpowers/sdd/`（git 忽略）

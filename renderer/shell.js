@@ -179,7 +179,7 @@ window.addEventListener('drop', async (e) => {
   // 终审修复：扩展名比较大小写不敏感（Windows 上 BOOK.TXT 应可拖入）；
   // 必须先判 files.length === 1 再解引用 files[0] —— URL 拖入时 files 为空列表，
   // 无条件 files[0] 会抛 TypeError，使下方 uri-list 分支（规格 §5.3/§10.2）永远不可达。
-  if (files.length === 1 && /\.(txt|epub)$/i.test(files[0].name.toLowerCase())) {
+  if (files.length === 1 && /\.(txt|epub|mobi)$/i.test(files[0].name.toLowerCase())) {
     const filePath = window.api.getPathForFile(files[0]);
     // 规格 §5.2/§9：超大文件（>50MB）提示，仍可读（解析按章懒读取，渲染不进整文件）
     const big = files[0].size > 50 * 1024 * 1024;
@@ -205,7 +205,7 @@ window.addEventListener('drop', async (e) => {
     return;
   }
   // 规格 §9：拖入不支持的类型 → 忽略并轻提示
-  showConfirm('不支持的拖入内容：仅支持 txt/epub 文件或 http(s) 链接', () => hideConfirm());
+  showConfirm('不支持的拖入内容：仅支持 txt/epub/mobi 文件或 http(s) 链接', () => hideConfirm());
   $('#confirm-bar').classList.add('error');
 });
 

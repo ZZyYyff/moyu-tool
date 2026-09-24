@@ -4,12 +4,12 @@
 
 ## 项目概述
 
-「摸鱼工具」（moyu-tool）——Windows 10+ 桌面右下角伪装成广告弹窗的 Electron 应用（Electron 43，原生 JS 无框架，node:test 测试）。拖入 URL → 内置多标签浏览器（WebContentsView）；拖入 .txt/.epub → 带目录/进度记忆的小说阅读器。全局热键一键隐藏，鼠标悬停揭示内容（可开关）。核心诉求：谁看都是一坨没人理会的广告。
+「摸鱼工具」（moyu-tool）——Windows 10+ 桌面右下角伪装成广告弹窗的 Electron 应用（Electron 43，原生 JS 无框架，node:test 测试）。拖入 URL → 内置多标签浏览器（WebContentsView）；拖入 .txt/.epub/.mobi → 小说阅读器（翻页/滚动双模式、书签、全文搜索、在线书源）。全局热键一键隐藏，鼠标悬停揭示内容（可开关）。核心诉求：谁看都是一坨没人理会的广告。
 
 ## 目录
 
-- `main/` — 主进程：main.js（入口/模式切换）、ipc.js、tabs.js（多标签 + zoom-to-fit）、window.js、hotkeys.js、novels.js、store.js、tray.js
-- `renderer/` — 壳层渲染进程（单页无框架，经典 script 共享全局）：shell.js、settings.js、ad/（伪装广告，文案在 ad-themes.json）、reader/
+- `main/` — 主进程：main.js（入口/模式切换）、ipc.js、tabs.js（多标签 + zoom-to-fit）、window.js、hotkeys.js、novels.js（解析/搜索/在线书缓存）、mobi.js、booksource.js（在线书源）、store.js、tray.js
+- `renderer/` — 壳层渲染进程（单页无框架，经典 script 共享全局）：shell.js、settings.js、ad/（伪装广告，文案在 ad-themes.json）、reader/（阅读器 v2：翻页引擎/面板体系/进度 v2）
 - `preload/preload.js` — 仅壳层使用；远程页面无 preload
 - `test/` — node:test 单元测试（只覆盖纯逻辑）
 - `scripts/` — gen-icon.js；临时探针 probe-*.js（验证后删除）
@@ -20,6 +20,7 @@
 
 - `CLAUDE.md` — 完整开发指引（架构细节与全部易踩点）
 - 规格 `docs/superpowers/specs/2026-08-21-moyu-tool-design.md`（含裁定记录 A-AA；规格与代码冲突以规格为准，不要推翻已裁定决策）
+- 阅读器重设计规格 `docs/superpowers/specs/2026-09-24-reader-redesign.md`（裁定 R-24 系列：进度 v2/翻页双模式/章节解析 v2/书源/MOBI 边界）
 - 实施计划 `docs/superpowers/plans/2026-08-21-moyu-tool.md`
 
 ## 常用命令
@@ -32,7 +33,7 @@
 
 ## 架构要点
 
-- **模式切换（最重要的全局概念）**：`ad`（伪装 340×280）/ `content`（内容 1150×750），唯一切换入口是 main.js 的 `applyMode(m)`（mode 状态 + `tabsApi.setMode` + `applyBoundsForMode`）。主进程驱动的切换（托盘/热键/悬停）必须补发 `win.webContents.send('mode:set', m)` 让壳层同步 DOM。窗口尺寸按模式双槽记忆（`settings.adBounds`/`contentBounds`），最大化期间不持久化。
+- **模式切换（最重要的全局概念）**：`ad`（伪装 340×280）/ `content`（内容 1150×750），唯一切换入口是 main.js 的 `applyMode(m)`（mode 状态 + `tabsApi.setMode` + `applyBoundsForMode`）。主进程驱动的切换（托盘/热键/悬停）必须补发 `win.webContents.send('mode:set', m)` 让壳层同步 DOM。窗口尺寸按模式双槽记忆（`settings.adBounds`/`contentBounds`），最大化期间不持久化；切模式以当前窗口右下角为锚只换尺寸、收进工作区（`anchorBottomRight`/`clampToWorkArea`）——若按双槽各自恢复位置，位置分叉会让悬停揭示在两个位置间无限振荡。
 - **远程内容安全（不可破坏）**：每个 WebContentsView `sandbox:true, nodeIntegration:false, contextIsolation:true` 且无 preload（远程页零 IPC 面）；`window.open` → deny + 主进程新建标签；仅放行 http/https；每标签独立 `persist:tab-<id>` 分区；UA 剥离 Electron 标记（惰性求值——`app.userAgent` 在 ready 前是 undefined，模块顶层求值会崩）。
 - **壳层脚本共享全局**：顶层 `const $` 只在 shell.js 声明一次（reader.js 重复声明曾致整个脚本 SyntaxError 静默失效）；`shell:ready` 初始化延迟到 window load（IPC 响应可能早于后续脚本求值）。
 - **热键**：`normalizeAccelerator` 白名单校验；`setCallbacks({toggleWindow, toggleMode})` 回调表为 registerHotkeys 与 applyHotkeyChange 共用（Ruling B）。
@@ -42,11 +43,13 @@
 - **拖拽区吞事件（踩过两次）**：`-webkit-app-region: drag` 矩形内所有鼠标事件被吞，无论上面叠什么。拖拽区仅 `.ad-top` 与 `#tabbar`（34px 顶带）；任何叠在顶带上的交互元素必须加 `-webkit-app-region: no-drag` 挖孔。CDP 合成点击绕过 OS 命中测试，验证不了这类问题，必须真实鼠标。
 - **悬停揭示用轮询**：Electron 43 + Windows 无边框窗口 mouse-enter/leave 事件不触发，main.js 用 200ms 轮询 `screen.getCursorScreenPoint()` 判定；启动 2s 宽限期。
 - **zoom-to-fit 禁止缩放中测量**：仅 zoom=1 时测页面真实内容宽度并记忆到 `tab.fitNeed`，溢出则 `setZoomFactor`（下限 0.25）；缩放状态下测量值随 zoom 漂移会振荡。加载/导航后重置 zoom=1 再测。
-- **阅读器进度**：滚动防抖 2s 写盘；`saveNow` 有 hidden 守卫（display:none 下 scrollHeight=0 会算出 0 覆盖好进度）；切换标签/隐藏/关闭前必须 flush；续读定位用记录的 scrollRatio（clamp 0~0.95），不是固定值。
+- **阅读器进度 v2**：`{chapterIndex, charOffset}`（章内字符偏移，段落 `<p data-off>` 落 DOM），旧 scrollRatio 回落兼容；滚动防抖 2s 写盘，`saveNow` 有 hidden 守卫（display:none 下会算出 0 覆盖好进度）；切换标签/隐藏/关闭前必须 flush；伪装模式定位需临时显形（`restoreAt`）。翻页 page/scroll 双模式：page 章尾进章/章首退章，scroll 章底自动追加下一章。
 - **标签 failed 标志**：chrome-error 页会二次触发 did-finish-load（getURL 返回原 URL），只有 did-navigate（chrome-error 不触发）与 reload 前清除。
 - **广告文案契约**：四套样式（news 默认/game/prize/sys）文案全在 `renderer/ad/ad-themes.json`——用户改文案不碰代码。假关闭按钮只隐藏到托盘，绝不关闭。
 - **小说编码**：UTF-8 严格解码失败自动回落 GBK（裁定 R，不做手动选择）；文件只主进程读（`path.isAbsolute` 校验），副本存 `userData/novels/`。
-- **设置存储**：`userData/settings.json` 原子写（tmp+rename，损坏 → 备份 .bak 后回默认）；进度在 `userData/progress.json`。
+- **在线书追加契约**：`appendChapter` 章间分隔 `\n\n`、正文不含标题行（渲染层自绘 h2）；`getChapterText` 会剥章尾分隔空行；书源 `enabled` 判断用 `!== false`。
+- **MOBI**：尾部条目在解压后文本流上剥离（末字节低 2 位 = 重叠数-1，重叠字节摘给下一记录）；HUFF/CDIC 与 DRM 明确报错。
+- **设置存储**：`userData/settings.json` 原子写（tmp+rename，损坏 → 备份 .bak 后回默认）；进度 `userData/progress.json`、书签 `userData/bookmarks.json`、书源 `userData/booksources.json`。
 
 ## 测试与验证惯例
 

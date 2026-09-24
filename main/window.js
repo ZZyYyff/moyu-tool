@@ -75,14 +75,46 @@ function createMainWindow(userDataDir, { getMode }) {
   return win;
 }
 
-// Ruling Z：切模式时把窗口 setBounds 到该模式的记忆尺寸。
-// setBounds 触发 resize → 持久化防抖写回同值（幂等，无副作用）。
+// 模式切换的位置连续性：目标 bounds 只取尺寸，位置以当前窗口右下角为锚。
+// 若按双槽各自恢复位置，两槽位置分叉（如内容模式拖动过窗口、伪装槽仍在默认右下角）时
+// 悬停揭示会无限振荡——光标悬在伪装窗上，内容窗却 setBounds 到另一处，200ms 轮询
+// 随即判定"移开"再切回，窗口在两个位置间闪烁。右下角锚点与双尺寸默认定位（右下 16px）
+// 几何一致：默认状态下切换前后窗口右下角重合，行为与双槽恢复完全相同。
+function anchorBottomRight(current, target) {
+  return { ...target, x: current.x + current.width - target.width, y: current.y + current.height - target.height };
+}
+
+// 锚定后可能越出工作区（如伪装小窗停在屏幕边缘，放大成内容大窗）——收进窗口当前
+// 所在显示器的工作区；窗口某维大于工作区时该维对齐工作区左上。收敛方向只向左/上，
+// 悬停揭示放大窗口时光标仍落在新窗口内。
+function clampToWorkArea(bounds, workArea) {
+  const x = bounds.width >= workArea.width
+    ? workArea.x
+    : Math.min(Math.max(bounds.x, workArea.x), workArea.x + workArea.width - bounds.width);
+  const y = bounds.height >= workArea.height
+    ? workArea.y
+    : Math.min(Math.max(bounds.y, workArea.y), workArea.y + workArea.height - bounds.height);
+  return { ...bounds, x: Math.round(x), y: Math.round(y) };
+}
+
+// Ruling Z：切模式时把窗口 setBounds 到该模式的记忆尺寸；位置按当前窗口右下角锚定
+// （见 anchorBottomRight）。setBounds 触发 resize → 持久化防抖把锚定后的 bounds 写回
+// 当前模式槽位，两槽位置自然收敛，历史分叉的存量设置在首次切换时即被治愈。
 function applyBoundsForMode(mode, userDataDir) {
   if (!mainWin || mainWin.isDestroyed()) return;
   if (mainWin.isMaximized()) mainWin.unmaximize();
-  const workArea = screen.getPrimaryDisplay().workArea;
   const settings = store.loadSettings(userDataDir);
-  mainWin.setBounds(computeModeBounds(mode, workArea, settings));
+  const current = mainWin.getBounds(); // unmaximize 后即还原的常规 bounds
+  const target = computeModeBounds(mode, screen.getPrimaryDisplay().workArea, settings);
+  const workArea = screen.getDisplayMatching(current).workArea; // 不跨显示器跳变
+  mainWin.setBounds(clampToWorkArea(anchorBottomRight(current, target), workArea));
 }
 
-module.exports = { computeDefaultBounds, computeModeBounds, createMainWindow, applyBoundsForMode };
+module.exports = {
+  computeDefaultBounds,
+  computeModeBounds,
+  createMainWindow,
+  applyBoundsForMode,
+  anchorBottomRight,
+  clampToWorkArea,
+};
